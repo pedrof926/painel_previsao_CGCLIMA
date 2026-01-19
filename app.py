@@ -1,34 +1,32 @@
 # -*- coding: utf-8 -*-
 """
-Painel Dash para visualizar as figuras geradas pelo ECMWF (PNGs)
-+ Camada interativa com pontos de Unidades de Saúde (UPA/UBS/UBSI) com hover.
+Painel Dash para visualizar as figuras geradas pelo ECMWF:
 
-Requisitos:
-- Subir o arquivo: upa_ubs_ubsi.xlsx (na mesma pasta do app.py no GitHub/Render)
-- As abas do Excel:
-    UPA  : nm_fantasia, cd_cnes, lon, lat
-    UBS  : cd_unidade, cd_cnes, nm_fantasia, cd_mun, lon, lat
-    UBSI : cd_dsei, dsei, polo_base, cod_polo, nome_da_es, cd_mun, lon, lat
+Lê arquivos PNG no MESMO DIRETÓRIO do app.py
+(como estão hoje no GitHub), com nomes do tipo:
+    ecmwf_prec_YYYY-MM-DD.png
+    ecmwf_tmin_YYYY-MM-DD.png
+    ecmwf_tmax_YYYY-MM-DD.png
+    ecmwf_tmed_YYYY-MM-DD.png
+    ecmwf_prec_acumulada_YYYY-MM-DD_a_YYYY-MM-DD.png
+
+Permite:
+- Ver mapa diário (por data e variável)
+- Ver animação ao longo dos dias para a variável escolhida (exceto acumulada)
 """
 
 from pathlib import Path
 import base64
 from datetime import datetime
 
-import pandas as pd
 from dash import Dash, html, dcc, Input, Output
 import dash_bootstrap_components as dbc
 import plotly.graph_objects as go
 
 # ----------------- CONFIGURAÇÕES ----------------- #
 
+# Agora as figuras ficam no MESMO diretório do app.py
 IMG_DIR = Path(__file__).parent  # pasta onde estão app.py e os PNGs
-UNITS_XLSX = IMG_DIR / "upa_ubs_ubsi.xlsx"
-
-# IMPORTANTE: este EXTENT precisa ser o mesmo usado na geração dos PNGs
-# (no teu figuras_ecmwf.py aparece: ax.set_extent([-90, -30, -60, 15], crs=ccrs.PlateCarree()))
-LON_MIN, LON_MAX = -90.0, -30.0
-LAT_MIN, LAT_MAX = -60.0,  15.0
 
 # ----------------- VARIÁVEIS DISPONÍVEIS ----------------- #
 
@@ -56,23 +54,25 @@ VAR_OPCOES = {
     "prec_acum": {
         "label": "Precipitação acumulada no período (mm)",
         "prefix": "ecmwf_prec_acumulada_",
-        "usa_data": False,
+        "usa_data": False,  # ignora dropdown de data
     },
 }
 
-# ----------------- FUNÇÕES AUXILIARES (DATAS/IMAGENS) ----------------- #
+# ----------------- FUNÇÕES AUXILIARES ----------------- #
 
 def listar_datas_disponiveis():
     """
-    Varre a pasta e procura arquivos:
+    Varre a pasta e procura arquivos de precipitação diária:
         ecmwf_prec_YYYY-MM-DD.png
+    e usa o sufixo YYYY-MM-DD como 'data_tag'.
+    Supõe que as demais variáveis também existem para os mesmos dias.
     """
     if not IMG_DIR.exists():
         raise FileNotFoundError(f"Pasta de imagens não encontrada: {IMG_DIR}")
 
     datas = set()
     for img_path in IMG_DIR.glob("ecmwf_prec_*.png"):
-        stem = img_path.stem
+        stem = img_path.stem  # ex.: 'ecmwf_prec_2025-11-13'
         parte_data = stem.replace("ecmwf_prec_", "", 1)
         try:
             datetime.strptime(parte_data, "%Y-%m-%d")
@@ -80,18 +80,23 @@ def listar_datas_disponiveis():
         except ValueError:
             continue
 
-    return sorted(datas)
+    datas_ordenadas = sorted(datas)
+    return datas_ordenadas
 
 
 def formatar_label_br(data_iso: str) -> str:
+    """Converte '2025-11-13' -> '13/11/2025'."""
     dt = datetime.strptime(data_iso, "%Y-%m-%d")
     return dt.strftime("%d/%m/%Y")
 
 
 def carregar_imagem_base64(var_key: str, data_iso: str | None) -> str:
     """
-    Lê o PNG e embute em base64.
-    Para 'prec_acum', pega o arquivo acumulado mais recente.
+    Lê o arquivo PNG correspondente à variável e data,
+    converte em base64 para embutir no Dash:
+      data:image/png;base64,....
+
+    Para 'prec_acum', ignora data_iso e pega o arquivo acumulado mais recente.
     """
     info = VAR_OPCOES[var_key]
     prefix = info["prefix"]
@@ -99,7 +104,7 @@ def carregar_imagem_base64(var_key: str, data_iso: str | None) -> str:
     if var_key == "prec_acum":
         candidates = sorted(IMG_DIR.glob(f"{prefix}*.png"))
         if not candidates:
-            print(f"⚠️ Nenhuma imagem acumulada encontrada com padrão {prefix}*.png")
+            print(f"⚠️ Nenhuma imagem de precipitação acumulada encontrada com padrão {prefix}*.png")
             return ""
         img_path = candidates[-1]
     else:
@@ -116,160 +121,59 @@ def carregar_imagem_base64(var_key: str, data_iso: str | None) -> str:
 
     return f"data:image/png;base64,{encoded}"
 
-# ----------------- FUNÇÕES AUXILIARES (UNIDADES) ----------------- #
 
-def _to_num(series):
-    return pd.to_numeric(series, errors="coerce")
-
-def load_unidades_excel(path_xlsx: Path) -> pd.DataFrame:
+def construir_figura_estatica(src: str, titulo: str) -> go.Figure:
     """
-    Lê UPA/UBS/UBSI do Excel e padroniza colunas para o Dash:
-      tipo, nome, cnes, cd_mun, lon, lat, dsei, polo_base, cod_polo
-    + calcula x,y normalizados (0..1) para sobrepor no PNG.
+    Constrói uma figura Plotly contendo UMA imagem base64,
+    com eixos ocultos, mas permitindo zoom/pan.
     """
-    if not path_xlsx.exists():
-        print(f"⚠️ Arquivo de unidades não encontrado: {path_xlsx} (seguindo sem pontos)")
-        return pd.DataFrame()
-
-    xls = pd.ExcelFile(path_xlsx)
-
-    # --- UPA ---
-    upa = pd.read_excel(xls, "UPA")
-    upa = upa.rename(columns={"nm_fantasia": "nome", "cd_cnes": "cnes"})
-    upa["tipo"] = "UPA"
-    if "cd_mun" not in upa.columns:
-        upa["cd_mun"] = pd.NA
-    upa["dsei"] = pd.NA
-    upa["polo_base"] = pd.NA
-    upa["cod_polo"] = pd.NA
-    upa = upa[["tipo", "nome", "cnes", "cd_mun", "lon", "lat", "dsei", "polo_base", "cod_polo"]]
-
-    # --- UBS ---
-    ubs = pd.read_excel(xls, "UBS")
-    ubs = ubs.rename(columns={"nm_fantasia": "nome", "cd_cnes": "cnes"})
-    ubs["tipo"] = "UBS"
-    if "cd_mun" not in ubs.columns:
-        ubs["cd_mun"] = pd.NA
-    ubs["dsei"] = pd.NA
-    ubs["polo_base"] = pd.NA
-    ubs["cod_polo"] = pd.NA
-    ubs = ubs[["tipo", "nome", "cnes", "cd_mun", "lon", "lat", "dsei", "polo_base", "cod_polo"]]
-
-    # --- UBSI ---
-    ubsi = pd.read_excel(xls, "UBSI")
-    ubsi = ubsi.rename(columns={"nome_da_es": "nome"})
-    ubsi["tipo"] = "UBSI"
-    if "cnes" not in ubsi.columns:
-        ubsi["cnes"] = pd.NA
-    if "cd_mun" not in ubsi.columns:
-        ubsi["cd_mun"] = pd.NA
-    if "dsei" not in ubsi.columns:
-        ubsi["dsei"] = pd.NA
-    if "polo_base" not in ubsi.columns:
-        ubsi["polo_base"] = pd.NA
-    if "cod_polo" not in ubsi.columns:
-        ubsi["cod_polo"] = pd.NA
-    ubsi = ubsi[["tipo", "nome", "cnes", "cd_mun", "lon", "lat", "dsei", "polo_base", "cod_polo"]]
-
-    df = pd.concat([upa, ubs, ubsi], ignore_index=True)
-
-    # lon/lat numéricos
-    df["lon"] = _to_num(df["lon"])
-    df["lat"] = _to_num(df["lat"])
-    df = df.dropna(subset=["lon", "lat"]).copy()
-
-    # x,y normalizados (0..1)
-    df["x"] = (df["lon"] - LON_MIN) / (LON_MAX - LON_MIN)
-    df["y"] = (df["lat"] - LAT_MIN) / (LAT_MAX - LAT_MIN)
-
-    # mantém apenas dentro do quadro do PNG
-    df = df[df["x"].between(0, 1) & df["y"].between(0, 1)].copy()
-
-    # strings p/ hover
-    for col in ["nome", "tipo", "cnes", "cd_mun", "dsei", "polo_base", "cod_polo"]:
-        if col in df.columns:
-            df[col] = df[col].astype("string").fillna("")
-
-    return df
-
-def add_unidades_layer(fig: go.Figure, df_units: pd.DataFrame) -> go.Figure:
-    """
-    Sobrepõe pontos (x,y) sobre a imagem (0..1) com hover.
-    """
-    if df_units is None or df_units.empty:
+    fig = go.Figure()
+    if not src:
+        fig.update_layout(
+            xaxis={"visible": False},
+            yaxis={"visible": False},
+            margin=dict(l=0, r=0, t=40, b=0),
+            paper_bgcolor="white",
+            plot_bgcolor="white",
+        )
         return fig
 
-    # cores por tipo (simples e legível)
-    color_map = {"UPA": "red", "UBS": "blue", "UBSI": "green"}
-    colors = df_units["tipo"].map(color_map).fillna("black")
-
-    custom = df_units[["nome", "tipo", "cnes", "cd_mun", "dsei", "polo_base", "cod_polo", "lat", "lon"]].values
-
-    fig.add_trace(
-        go.Scatter(
-            x=df_units["x"],
-            y=df_units["y"],
-            mode="markers",
-            name="Unidades de Saúde",
-            marker=dict(size=6, opacity=0.85, color=colors),
-            customdata=custom,
-            hovertemplate=(
-                "<b>%{customdata[0]}</b><br>"
-                "Tipo: %{customdata[1]}<br>"
-                "CNES: %{customdata[2]}<br>"
-                "CD_MUN: %{customdata[3]}<br>"
-                "DSEI: %{customdata[4]}<br>"
-                "Polo: %{customdata[5]} (%{customdata[6]})<br>"
-                "Lat/Lon: %{customdata[7]:.3f}, %{customdata[8]:.3f}"
-                "<extra></extra>"
-            ),
+    fig.add_layout_image(
+        dict(
+            source=src,
+            xref="x",
+            yref="y",
+            x=0,
+            y=1,
+            sizex=1,
+            sizey=1,
+            sizing="stretch",
+            layer="below",
         )
     )
-    return fig
-
-# ----------------- FIGURAS (ESTÁTICA/ANIMAÇÃO) ----------------- #
-
-def construir_figura_estatica(src: str, titulo: str, df_units: pd.DataFrame, mostrar_unidades: bool) -> go.Figure:
-    fig = go.Figure()
-
-    if src:
-        fig.add_layout_image(
-            dict(
-                source=src,
-                xref="x",
-                yref="y",
-                x=0,
-                y=1,
-                sizex=1,
-                sizey=1,
-                sizing="stretch",
-                layer="below",
-            )
-        )
 
     fig.update_xaxes(visible=False, range=[0, 1])
     fig.update_yaxes(visible=False, range=[0, 1], scaleanchor="x")
 
     fig.update_layout(
-        title=dict(text=titulo, x=0.5, xanchor="center"),
-        margin=dict(l=0, r=0, t=50, b=0),
+        margin=dict(l=0, r=0, t=40, b=0),
         dragmode="pan",
         paper_bgcolor="white",
         plot_bgcolor="white",
-        showlegend=False,
     )
-
-    if mostrar_unidades and src:
-        fig = add_unidades_layer(fig, df_units)
-
     return fig
 
 
-def construir_animacao(var_key: str, datas_iso: list[str], titulo: str, df_units: pd.DataFrame, mostrar_unidades: bool) -> go.Figure:
+def construir_animacao(var_key: str, datas_iso: list[str]) -> go.Figure:
+    """
+    Constrói figura animada: cada frame é uma data da previsão.
+    Usa layout.images nos frames pra trocar o mapa.
+    """
     if len(datas_iso) == 0:
-        return construir_figura_estatica("", "Sem dados para animar", df_units, False)
+        return construir_figura_estatica("", "Sem dados para animar")
 
     src0 = carregar_imagem_base64(var_key, datas_iso[0])
+
     fig = go.Figure()
 
     if src0:
@@ -289,10 +193,6 @@ def construir_animacao(var_key: str, datas_iso: list[str], titulo: str, df_units
 
     fig.update_xaxes(visible=False, range=[0, 1])
     fig.update_yaxes(visible=False, range=[0, 1], scaleanchor="x")
-
-    # pontos fixos (não mudam por frame) — adiciona uma vez
-    if mostrar_unidades and (df_units is not None) and (not df_units.empty):
-        fig = add_unidades_layer(fig, df_units)
 
     frames = []
     for d in datas_iso:
@@ -372,19 +272,17 @@ def construir_animacao(var_key: str, datas_iso: list[str], titulo: str, df_units
     ]
 
     fig.update_layout(
-        title=dict(text=titulo, x=0.5, xanchor="center"),
-        margin=dict(l=0, r=0, t=50, b=40),
+        margin=dict(l=0, r=0, t=40, b=40),
         dragmode="pan",
         sliders=sliders,
         updatemenus=updatemenus,
         paper_bgcolor="white",
         plot_bgcolor="white",
-        showlegend=False,
     )
 
     return fig
 
-# ----------------- PREPARA LISTAS E DADOS ----------------- #
+# ----------------- PREPARA LISTA DE DATAS ----------------- #
 
 DATAS = listar_datas_disponiveis()
 if not DATAS:
@@ -392,15 +290,14 @@ if not DATAS:
         f"Nenhuma data diária encontrada em {IMG_DIR}. "
         f"Certifique-se de que existam arquivos ecmwf_prec_YYYY-MM-DD.png."
     )
-DATA_DEFAULT = DATAS[-1]
 
-# carrega unidades uma vez (em memória)
-DF_UNITS = load_unidades_excel(UNITS_XLSX)
+DATA_DEFAULT = DATAS[-1]
 
 # ----------------- APP DASH ----------------- #
 
 app = Dash(__name__, external_stylesheets=[dbc.themes.BOOTSTRAP])
-server = app.server  # pro Render/gunicorn
+server = app.server  # <- IMPORTANTE pro Render / gunicorn
+
 app.title = "Previsão ECMWF - Painel de Mapas"
 
 app.layout = dbc.Container(
@@ -419,6 +316,7 @@ app.layout = dbc.Container(
 
         dbc.Row(
             [
+                # COLUNA ESQUERDA: CONTROLES
                 dbc.Col(
                     [
                         html.H5("Campos de seleção", className="mb-3"),
@@ -426,7 +324,10 @@ app.layout = dbc.Container(
                         html.Label("Variável:", className="fw-bold"),
                         dcc.RadioItems(
                             id="radio-var",
-                            options=[{"label": v["label"], "value": k} for k, v in VAR_OPCOES.items()],
+                            options=[
+                                {"label": v["label"], "value": k}
+                                for k, v in VAR_OPCOES.items()
+                            ],
                             value="prec",
                             labelStyle={"display": "block"},
                             className="mb-3",
@@ -435,7 +336,10 @@ app.layout = dbc.Container(
                         html.Label("Data da previsão:", className="fw-bold"),
                         dcc.Dropdown(
                             id="dropdown-data",
-                            options=[{"label": formatar_label_br(d), "value": d} for d in DATAS],
+                            options=[
+                                {"label": formatar_label_br(d), "value": d}
+                                for d in DATAS
+                            ],
                             value=DATA_DEFAULT,
                             clearable=False,
                             className="mb-3",
@@ -455,24 +359,11 @@ app.layout = dbc.Container(
                             "Obs: Animação não se aplica à precipitação acumulada; nesse caso, o mapa é estático.",
                             className="text-muted",
                         ),
-
-                        html.Hr(),
-
-                        dbc.Checklist(
-                            id="check-unidades",
-                            options=[{"label": "Mostrar Unidades de Saúde (UPA/UBS/UBSI)", "value": "on"}],
-                            value=["on"],
-                            switch=True,
-                            className="mt-2",
-                        ),
-                        html.Small(
-                            f"Unidades carregadas: {len(DF_UNITS) if DF_UNITS is not None else 0}",
-                            className="text-muted",
-                        ),
                     ],
                     md=3, lg=3, xl=3,
                 ),
 
+                # COLUNA DIREITA: FIGURA GRANDE
                 dbc.Col(
                     [
                         dcc.Graph(
@@ -507,38 +398,38 @@ app.layout = dbc.Container(
     Input("dropdown-data", "value"),
     Input("radio-var", "value"),
     Input("radio-modo", "value"),
-    Input("check-unidades", "value"),
 )
-def atualizar_mapa(data_iso, var_key, modo, unidades_on):
-    mostrar_unidades = isinstance(unidades_on, list) and ("on" in unidades_on)
-
+def atualizar_mapa(data_iso, var_key, modo):
+    """
+    Atualiza a figura exibida de acordo com:
+      - data escolhida (para modo diário)
+      - variável (prec / tmin / tmax / tmed / prec_acum)
+      - modo (dia / anim)
+    """
     if var_key is None:
         return go.Figure()
 
     info = VAR_OPCOES[var_key]
 
-    # precipitação acumulada: pega png mais recente
     if var_key == "prec_acum":
         src = carregar_imagem_base64("prec_acum", None)
-        titulo = info["label"]
-        return construir_figura_estatica(src, titulo, DF_UNITS, mostrar_unidades)
+        fig = construir_figura_estatica(src, info["label"])
+        return fig
 
-    # diário
     if modo == "dia":
         if data_iso is None:
             return go.Figure()
-        titulo = f"{info['label']} – {formatar_label_br(data_iso)}"
+        label_data = formatar_label_br(data_iso)
+        titulo = f"{info['label']} – {label_data}"
         src = carregar_imagem_base64(var_key, data_iso)
-        return construir_figura_estatica(src, titulo, DF_UNITS, mostrar_unidades)
+        fig = construir_figura_estatica(src, titulo)
+        return fig
+    else:
+        fig = construir_animacao(var_key, DATAS)
+        return fig
 
-    # animação
-    titulo = f"{info['label']} – (animação)"
-    return construir_animacao(var_key, DATAS, titulo, DF_UNITS, mostrar_unidades)
 
-# ----------------- MAIN (LOCAL) ----------------- #
+# ----------------- MAIN (para rodar LOCALMENTE) ----------------- #
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=8050, debug=True)
-
-    app.run(host="0.0.0.0", port=8050, debug=True)
-
