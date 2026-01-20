@@ -4,20 +4,21 @@ Painel Dash para visualizar as figuras geradas pelo ECMWF
 + mapa de SOBREPOSIÇÃO (camada previsão GeoJSON + pontos de unidades UPA/UBS/UBSI).
 
 Arquivos esperados no MESMO repo (Render):
-- PNGs no mesmo diretório do app.py:
+- PNGs na raiz:
     ecmwf_prec_YYYY-MM-DD.png
     ecmwf_tmin_YYYY-MM-DD.png
     ecmwf_tmax_YYYY-MM-DD.png
     ecmwf_tmed_YYYY-MM-DD.png
     ecmwf_prec_acumulada_YYYY-MM-DD_a_YYYY-MM-DD.png
 
-- Unidades (Point GeoJSON) no mesmo diretório do app.py:
+- Unidades (Point GeoJSON) na raiz:
     upa.geojson
     ubs.geojson
     ubsi.geojson
+  (pode estar com letras maiúsculas/minúsculas variadas; o app resolve)
 
 - Camadas previsão (GeoJSON MultiPolygon por classe) em:
-    camadas_geojson/  (ou na raiz — fallback)
+    camadas_geojson/  OU na raiz
       prec_YYYY-MM-DD.geojson
       tmin_YYYY-MM-DD.geojson
       tmax_YYYY-MM-DD.geojson
@@ -38,18 +39,11 @@ import plotly.graph_objects as go
 # ----------------- CONFIGURAÇÕES ----------------- #
 BASE_DIR = Path(__file__).parent
 IMG_DIR = BASE_DIR
+
 CAMADAS_DIR = BASE_DIR / "camadas_geojson"
+CAMADAS_FALLBACK_DIRS = [CAMADAS_DIR, BASE_DIR]  # procura primeiro na pasta, depois na raiz
 
-# Fallback: se os geojson de previsão estão no diretório raiz
-CAMADAS_FALLBACK_DIRS = [CAMADAS_DIR, BASE_DIR]
-
-GEOJSON_FILES = {
-    "upa": BASE_DIR / "upa.geojson",
-    "ubs": BASE_DIR / "ubs.geojson",
-    "ubsi": BASE_DIR / "ubsi.geojson",
-}
-
-# Recorte padrão (igual às figuras / teu processamento)
+# Recorte padrão (igual às figuras)
 # (lon_min, lon_max, lat_min, lat_max)
 EXTENT = (-90, -30, -60, 15)
 
@@ -62,7 +56,7 @@ VAR_OPCOES = {
     "prec_acum": {"label": "Precipitação acumulada no período (mm)", "prefix": "ecmwf_prec_acumulada_", "usa_data": False},
 }
 
-# ----------------- HELPERS (PREVISÃO PNG) ----------------- #
+# ----------------- HELPERS (PNG) ----------------- #
 def listar_datas_disponiveis():
     datas = set()
     for img_path in IMG_DIR.glob("ecmwf_prec_*.png"):
@@ -95,7 +89,7 @@ def carregar_imagem_base64(var_key: str, data_iso: str | None) -> str:
         img_path = IMG_DIR / f"{prefix}{data_iso}.png"
 
     if not img_path.exists():
-        print(f"⚠️ PNG não encontrado: {img_path}")
+        print(f"⚠️ PNG não encontrado: {img_path.name}")
         return ""
 
     with open(img_path, "rb") as f:
@@ -197,10 +191,22 @@ def construir_animacao(var_key: str, datas_iso: list[str], titulo: str) -> go.Fi
     )
     return fig
 
+# ----------------- HELPERS (RESOLVER ARQUIVOS NA RAIZ, CASE-INSENSITIVE) ----------------- #
+def resolver_arquivo_geojson_unidades(key: str) -> Path | None:
+    """
+    Resolve upa/ubs/ubsi.geojson na raiz, ignorando maiúsculas/minúsculas.
+    Ex.: UBS.geojson vai ser encontrado no Render (Linux).
+    """
+    target = f"{key}.geojson".lower()
+    for p in BASE_DIR.glob("*.geojson"):
+        if p.name.lower() == target:
+            return p
+    return None
+
 # ----------------- HELPERS (UNIDADES) ----------------- #
-def carregar_geojson_points(caminho: Path, camada: str):
-    if not caminho.exists():
-        print(f"⚠️ GeoJSON não encontrado: {caminho}")
+def carregar_geojson_points(caminho: Path | None, camada: str):
+    if (caminho is None) or (not caminho.exists()):
+        print(f"⚠️ GeoJSON não encontrado (unidades): {camada}")
         return [], [], []
 
     with open(caminho, "r", encoding="utf-8") as f:
@@ -238,18 +244,7 @@ def carregar_geojson_points(caminho: Path, camada: str):
 
     return lats, lons, custom
 
-# ----------------- HELPERS (CAMADAS PREVISÃO GEOJSON) ----------------- #
-def _parse_date_from_name(name: str) -> str | None:
-    m = re.search(r"\d{4}-\d{2}-\d{2}", name)
-    if not m:
-        return None
-    di = m.group(0)
-    try:
-        datetime.strptime(di, "%Y-%m-%d")
-        return di
-    except Exception:
-        return None
-
+# ----------------- HELPERS (CAMADAS PREVISÃO) ----------------- #
 def _latest_file_in_dirs(pattern: str) -> Path | None:
     cands = []
     for d in CAMADAS_FALLBACK_DIRS:
@@ -258,51 +253,26 @@ def _latest_file_in_dirs(pattern: str) -> Path | None:
     cands = sorted(cands)
     return cands[-1] if cands else None
 
-def _best_match_date_file(var_key: str, data_iso: str) -> Path | None:
-    # 1) exato
+def caminho_camadas_previsao_exata(var_key: str, data_iso: str | None) -> Path | None:
+    """
+    IMPORTANTE: usa data EXATA.
+    - prec/tmin/tmax/tmed: var_YYYY-MM-DD.geojson
+    - prec_acum: prec_acum_YYYY-MM-DD_a_YYYY-MM-DD.geojson (mais recente)
+    """
+    if var_key == "prec_acum":
+        return _latest_file_in_dirs("prec_acum_*.geojson")
+
+    if not data_iso:
+        return None
+
     for d in CAMADAS_FALLBACK_DIRS:
         p = d / f"{var_key}_{data_iso}.geojson"
         if p.exists():
             return p
+    return None  # não inventa outro arquivo
 
-    # 2) qualquer que contenha a data
-    for d in CAMADAS_FALLBACK_DIRS:
-        if d.exists():
-            hits = sorted(d.glob(f"{var_key}*{data_iso}*.geojson"))
-            if hits:
-                return hits[-1]
-
-    # 3) fallback pela data extraída
-    target = datetime.strptime(data_iso, "%Y-%m-%d")
-    all_files = []
-    for d in CAMADAS_FALLBACK_DIRS:
-        if d.exists():
-            all_files += list(d.glob(f"{var_key}*.geojson"))
-
-    dated = []
-    for p in all_files:
-        di = _parse_date_from_name(p.name)
-        if di:
-            dated.append((datetime.strptime(di, "%Y-%m-%d"), p))
-
-    if not dated:
-        return None
-
-    dated.sort(key=lambda x: x[0])
-    leq = [x for x in dated if x[0] <= target]
-    if leq:
-        return leq[-1][1]
-    return dated[-1][1]
-
-def caminho_camadas_previsao(var_key: str, data_iso: str | None) -> Path | None:
-    if var_key == "prec_acum":
-        return _latest_file_in_dirs("prec_acum_*.geojson")
-    if not data_iso:
-        return None
-    return _best_match_date_file(var_key, data_iso)
-
-def carregar_geojson_poligonos_por_classe(path_geojson: Path):
-    if not path_geojson or not path_geojson.exists():
+def carregar_geojson_poligonos_por_classe(path_geojson: Path | None):
+    if (path_geojson is None) or (not path_geojson.exists()):
         return []
     with open(path_geojson, "r", encoding="utf-8") as f:
         gj = json.load(f)
@@ -320,59 +290,64 @@ def carregar_geojson_poligonos_por_classe(path_geojson: Path):
 def construir_mapa_sobreposicao(var_key: str, data_iso: str | None, camada_unidade: str, mostrar_previsao: bool, mostrar_unidades: bool) -> go.Figure:
     fig = go.Figure()
 
-    # Base: fixa o enquadramento no recorte das figuras (América do Sul)
     lon_min, lon_max, lat_min, lat_max = EXTENT
     center_lat = (lat_min + lat_max) / 2
     center_lon = (lon_min + lon_max) / 2
-    zoom = 3.0  # bem próximo do teu recorte (sem África)
+    zoom = 3.4
 
     # --- PREVISÃO (POLÍGONOS) ---
     if mostrar_previsao:
-        p = caminho_camadas_previsao(var_key, data_iso) if var_key != "prec_acum" else caminho_camadas_previsao("prec_acum", None)
-        feats = carregar_geojson_poligonos_por_classe(p) if p else []
+        p = caminho_camadas_previsao_exata(var_key, data_iso)
+        feats = carregar_geojson_poligonos_por_classe(p)
 
-        for i, ft in enumerate(feats):
-            props = ft.get("properties", {}) or {}
-            label = props.get("label", f"classe {i}")
-            hex_color = props.get("hex", "#999999")
-            ordem = int(props.get("ordem", i))
-
-            # FIX do Plotly: precisa de id que bata com locations
-            ft2 = dict(ft)
-            ft2["id"] = f"classe_{ordem}"
-
-            gj_one = {"type": "FeatureCollection", "features": [ft2]}
-
-            fig.add_trace(
-                go.Choroplethmapbox(
-                    geojson=gj_one,
-                    featureidkey="id",
-                    locations=[ft2["id"]],
-                    z=[1],
-                    colorscale=[[0, hex_color], [1, hex_color]],
-                    showscale=False,
-                    marker_opacity=0.60,
-                    marker_line_width=0,
-                    name=label,                 # ✅ legenda com os intervalos
-                    legendgroup="previsao",
-                    legendrank=ordem,           # ✅ ordena a legenda
-                    hovertemplate=f"<b>{label}</b><extra></extra>",
-                    showlegend=True,
-                )
-            )
-
-        if var_key == "prec_acum":
-            titulo_prev = "Camada previsão: Precipitação acumulada"
+        # Se não achou o arquivo da data, não plota nada (e o título deixa claro)
+        if not feats:
+            if var_key == "prec_acum":
+                titulo_prev = "Camada previsão: Precipitação acumulada (arquivo não encontrado)"
+            else:
+                titulo_prev = f"Camada previsão: {VAR_OPCOES[var_key]['label']} – {formatar_label_br(data_iso)} (arquivo não encontrado)" if data_iso else "Camada previsão: (arquivo não encontrado)"
         else:
-            titulo_prev = f"Camada previsão: {VAR_OPCOES[var_key]['label']} – {formatar_label_br(data_iso)}" if data_iso else f"Camada previsão: {VAR_OPCOES[var_key]['label']}"
+            for i, ft in enumerate(feats):
+                props = ft.get("properties", {}) or {}
+                label = props.get("label", f"classe {i}")
+                hex_color = props.get("hex", "#999999")
+                ordem = int(props.get("ordem", i))
+
+                # FIX Plotly: id bate com locations
+                ft2 = dict(ft)
+                ft2["id"] = f"classe_{ordem}"
+                gj_one = {"type": "FeatureCollection", "features": [ft2]}
+
+                fig.add_trace(
+                    go.Choroplethmapbox(
+                        geojson=gj_one,
+                        featureidkey="id",
+                        locations=[ft2["id"]],
+                        z=[1],
+                        colorscale=[[0, hex_color], [1, hex_color]],
+                        showscale=False,
+                        marker_opacity=0.60,
+                        marker_line_width=0,
+                        name=label,               # ✅ legenda por intervalo
+                        legendgroup="previsao",
+                        legendrank=ordem,
+                        hovertemplate=f"<b>{label}</b><extra></extra>",
+                        showlegend=True,
+                    )
+                )
+
+            if var_key == "prec_acum":
+                titulo_prev = "Camada previsão: Precipitação acumulada"
+            else:
+                titulo_prev = f"Camada previsão: {VAR_OPCOES[var_key]['label']} – {formatar_label_br(data_iso)}" if data_iso else f"Camada previsão: {VAR_OPCOES[var_key]['label']}"
     else:
         titulo_prev = "Camada previsão: (desligada)"
 
     # --- UNIDADES (PONTOS) ---
     if mostrar_unidades:
         cores = {"upa": "red", "ubs": "blue", "ubsi": "green"}
-        arquivo = GEOJSON_FILES.get(camada_unidade)
-        lats, lons, custom = carregar_geojson_points(arquivo, camada_unidade)
+        arq = resolver_arquivo_geojson_unidades(camada_unidade)
+        lats, lons, custom = carregar_geojson_points(arq, camada_unidade)
 
         if lats and lons:
             fig.add_trace(
@@ -407,11 +382,12 @@ def construir_mapa_sobreposicao(var_key: str, data_iso: str | None, camada_unida
             style="open-street-map",
             center=dict(lat=center_lat, lon=center_lon),
             zoom=zoom,
+            # ✅ trava o “recorte” (não deixa abrir o mundo feio)
+            bounds=dict(west=lon_min, east=lon_max, south=lat_min, north=lat_max),
         ),
         paper_bgcolor="white",
         plot_bgcolor="white",
         showlegend=True,
-        # ✅ legenda “de verdade” (vertical na direita)
         legend=dict(
             orientation="v",
             yanchor="top", y=0.98,
@@ -422,6 +398,8 @@ def construir_mapa_sobreposicao(var_key: str, data_iso: str | None, camada_unida
             traceorder="normal",
             font=dict(size=11),
         ),
+        # ajuda a manter comportamento consistente ao trocar data/variável
+        uirevision="overlay_lock",
     )
     return fig
 
@@ -446,16 +424,14 @@ app.layout = dbc.Container(
             className="mt-3 mb-2",
             style={"textAlign": "center"},
         ),
-
         html.Div(
-            "Visualização diária de precipitação e temperatura (ECMWF) + sobreposição com unidades (UPA/UBS/UBSI).",
+            "Visualização diária (figuras) + sobreposição (camadas GeoJSON + UPA/UBS/UBSI).",
             className="mb-3",
             style={"textAlign": "center"},
         ),
 
         dbc.Row(
             [
-                # CONTROLES
                 dbc.Col(
                     [
                         html.H5("Campos de seleção", className="mb-3"),
@@ -523,14 +499,14 @@ app.layout = dbc.Container(
                             className="mb-2",
                         ),
                         html.Small(
-                            "A previsão usa GeoJSON em /camadas_geojson (ou na raiz).",
+                            "Previsão usa GeoJSON em /camadas_geojson (ou na raiz).",
                             className="text-muted",
                         ),
                     ],
                     md=3, lg=3, xl=3,
                 ),
 
-                # FIGURA (PNG) - AGORA SOZINHA NA DIREITA (sem mapa de unidades ao lado)
+                # ✅ só a FIGURA à direita (sem mapa de unidades ao lado)
                 dbc.Col(
                     [
                         dcc.Graph(
@@ -545,7 +521,6 @@ app.layout = dbc.Container(
             className="mb-2",
         ),
 
-        # MAPA DE SOBREPOSIÇÃO (embaixo, largura total)
         dbc.Row(
             [
                 dbc.Col(
@@ -617,6 +592,10 @@ def atualizar_overlay(data_iso, var_key, camada_unidade, check_values):
         mostrar_previsao=mostrar_previsao,
         mostrar_unidades=mostrar_unidades,
     )
+
+if __name__ == "__main__":
+    app.run(host="0.0.0.0", port=8050, debug=True)
+
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=8050, debug=True)
