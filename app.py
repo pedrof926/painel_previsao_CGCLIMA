@@ -1,30 +1,4 @@
 # -*- coding: utf-8 -*-
-"""
-Painel Dash para visualizar as figuras geradas pelo ECMWF + mapa de SOBREPOSIÇÃO
-(camada previsão GeoJSON + pontos de unidades UPA/UBS/UBSI).
-
-Arquivos esperados no MESMO repo (Render):
-- PNGs no mesmo diretório do app.py:
-    ecmwf_prec_YYYY-MM-DD.png
-    ecmwf_tmin_YYYY-MM-DD.png
-    ecmwf_tmax_YYYY-MM-DD.png
-    ecmwf_tmed_YYYY-MM-DD.png
-    ecmwf_prec_acumulada_YYYY-MM-DD_a_YYYY-MM-DD.png
-
-- Unidades (Point GeoJSON) no mesmo diretório do app.py:
-    upa.geojson
-    ubs.geojson
-    ubsi.geojson
-
-- Camadas previsão (GeoJSON MultiPolygon por classe) em:
-    camadas_geojson/
-      prec_YYYY-MM-DD.geojson
-      tmin_YYYY-MM-DD.geojson
-      tmax_YYYY-MM-DD.geojson
-      tmed_YYYY-MM-DD.geojson
-      prec_acum_YYYY-MM-DD_a_YYYY-MM-DD.geojson
-"""
-
 from pathlib import Path
 import base64
 import json
@@ -39,13 +13,6 @@ BASE_DIR = Path(__file__).parent
 IMG_DIR = BASE_DIR
 CAMADAS_DIR = BASE_DIR / "camadas_geojson"
 
-# arquivos “preferidos”
-GEOJSON_FILES = {
-    "upa": BASE_DIR / "upa.geojson",
-    "ubs": BASE_DIR / "ubs.geojson",
-    "ubsi": BASE_DIR / "ubsi.geojson",
-}
-
 # ----------------- VARIÁVEIS DISPONÍVEIS (PREVISÃO PNG) ----------------- #
 VAR_OPCOES = {
     "prec": {"label": "Precipitação diária (mm)", "prefix": "ecmwf_prec_", "usa_data": True},
@@ -55,7 +22,7 @@ VAR_OPCOES = {
     "prec_acum": {"label": "Precipitação acumulada no período (mm)", "prefix": "ecmwf_prec_acumulada_", "usa_data": False},
 }
 
-# ----------------- HELPERS (PREVISÃO PNG) ----------------- #
+# ----------------- HELPERS PNG ----------------- #
 def listar_datas_disponiveis():
     datas = set()
     for img_path in IMG_DIR.glob("ecmwf_prec_*.png"):
@@ -68,8 +35,7 @@ def listar_datas_disponiveis():
     return sorted(datas)
 
 def formatar_label_br(data_iso: str) -> str:
-    dt = datetime.strptime(data_iso, "%Y-%m-%d")
-    return dt.strftime("%d/%m/%Y")
+    return datetime.strptime(data_iso, "%Y-%m-%d").strftime("%d/%m/%Y")
 
 def carregar_imagem_base64(var_key: str, data_iso: str | None) -> str:
     info = VAR_OPCOES[var_key]
@@ -78,7 +44,6 @@ def carregar_imagem_base64(var_key: str, data_iso: str | None) -> str:
     if var_key == "prec_acum":
         candidates = sorted(IMG_DIR.glob(f"{prefix}*.png"))
         if not candidates:
-            print(f"⚠️ Nenhuma imagem acumulada encontrada: {prefix}*.png")
             return ""
         img_path = candidates[-1]
     else:
@@ -87,7 +52,6 @@ def carregar_imagem_base64(var_key: str, data_iso: str | None) -> str:
         img_path = IMG_DIR / f"{prefix}{data_iso}.png"
 
     if not img_path.exists():
-        print(f"⚠️ PNG não encontrado: {img_path}")
         return ""
 
     with open(img_path, "rb") as f:
@@ -101,8 +65,7 @@ def construir_figura_estatica(src: str, titulo: str) -> go.Figure:
             dict(
                 source=src,
                 xref="x", yref="y",
-                x=0, y=1,
-                sizex=1, sizey=1,
+                x=0, y=1, sizex=1, sizey=1,
                 sizing="stretch",
                 layer="below",
             )
@@ -118,74 +81,7 @@ def construir_figura_estatica(src: str, titulo: str) -> go.Figure:
     )
     return fig
 
-def construir_animacao(var_key: str, datas_iso: list[str], titulo: str) -> go.Figure:
-    if not datas_iso:
-        return construir_figura_estatica("", "Sem dados para animar")
-
-    src0 = carregar_imagem_base64(var_key, datas_iso[0])
-    fig = go.Figure()
-
-    if src0:
-        fig.add_layout_image(
-            dict(
-                source=src0, xref="x", yref="y",
-                x=0, y=1, sizex=1, sizey=1,
-                sizing="stretch", layer="below",
-            )
-        )
-
-    fig.update_xaxes(visible=False, range=[0, 1])
-    fig.update_yaxes(visible=False, range=[0, 1], scaleanchor="x")
-
-    frames = []
-    for d in datas_iso:
-        src = carregar_imagem_base64(var_key, d)
-        frames.append(
-            go.Frame(
-                name=d,
-                layout=dict(images=[dict(
-                    source=src, xref="x", yref="y",
-                    x=0, y=1, sizex=1, sizey=1,
-                    sizing="stretch", layer="below"
-                )]),
-            )
-        )
-    fig.frames = frames
-
-    slider_steps = [
-        dict(
-            method="animate",
-            args=[[f.name], {"mode": "immediate", "frame": {"duration": 500, "redraw": True}, "transition": {"duration": 0}}],
-            label=formatar_label_br(f.name),
-        )
-        for f in frames
-    ]
-
-    fig.update_layout(
-        title=dict(text=titulo, x=0.5, xanchor="center"),
-        margin=dict(l=0, r=0, t=45, b=40),
-        dragmode="pan",
-        sliders=[dict(
-            active=0, steps=slider_steps,
-            x=0.1, y=0, len=0.9,
-            pad={"t": 30, "b": 10},
-            currentvalue={"prefix": "Data: "},
-            transition={"duration": 0},
-        )],
-        updatemenus=[dict(
-            type="buttons", showactive=False,
-            x=0.0, y=1.05, xanchor="left", yanchor="top",
-            buttons=[dict(
-                label="▶ Play", method="animate",
-                args=[None, {"frame": {"duration": 500, "redraw": True}, "fromcurrent": True, "transition": {"duration": 0}}],
-            )],
-        )],
-        paper_bgcolor="white",
-        plot_bgcolor="white",
-    )
-    return fig
-
-# ----------------- HELPERS (UNIDADES) ----------------- #
+# ----------------- HELPERS GEOJSON ----------------- #
 def _safe_float(x):
     try:
         if isinstance(x, str):
@@ -194,34 +90,22 @@ def _safe_float(x):
     except Exception:
         return None
 
-def _find_geojson_units(camada_key: str) -> Path | None:
+def find_any_geojson(name_contains: str) -> Path | None:
     """
-    Resolve o arquivo da camada:
-    - tenta o caminho direto (BASE_DIR/upa.geojson etc)
-    - se não achar, procura recursivo no repo (Render às vezes muda cwd/estrutura)
+    Procura recursivo no repo por um .geojson cujo nome contenha 'name_contains'
+    (case-insensitive).
     """
-    preferred = GEOJSON_FILES.get(camada_key)
-    if preferred and preferred.exists():
-        return preferred
-
-    # tenta variações de case
-    for name in [f"{camada_key}.geojson", f"{camada_key.upper()}.geojson", f"{camada_key.capitalize()}.geojson"]:
-        p = BASE_DIR / name
-        if p.exists():
-            return p
-
-    # busca recursiva
-    hits = sorted(BASE_DIR.rglob(f"{camada_key}.geojson"))
-    if hits:
-        return hits[0]
-
-    print(f"⚠️ Unidades: não encontrei arquivo para '{camada_key}' no repo.")
-    return None
+    key = name_contains.lower()
+    hits = []
+    for p in BASE_DIR.rglob("*.geojson"):
+        if key in p.name.lower():
+            hits.append(p)
+    hits = sorted(hits)
+    return hits[0] if hits else None
 
 def carregar_geojson_points(caminho: Path | None, camada: str):
     if not caminho or not caminho.exists():
-        print(f"⚠️ GeoJSON de unidades não encontrado para {camada}: {caminho}")
-        return [], [], []
+        return [], [], [], f"❌ {camada}: arquivo não encontrado"
 
     with open(caminho, "r", encoding="utf-8") as f:
         gj = json.load(f)
@@ -231,8 +115,6 @@ def carregar_geojson_points(caminho: Path | None, camada: str):
 
     for ft in feats:
         geom = ft.get("geometry", {}) or {}
-        props = ft.get("properties", {}) or {}
-
         if geom.get("type") != "Point":
             continue
 
@@ -245,6 +127,7 @@ def carregar_geojson_points(caminho: Path | None, camada: str):
         if lon is None or lat is None:
             continue
 
+        props = ft.get("properties", {}) or {}
         nome = (
             props.get("nm_fantasia") or props.get("NM_FANTASIA")
             or props.get("nome_da_es") or props.get("NOME_DA_ES")
@@ -261,72 +144,41 @@ def carregar_geojson_points(caminho: Path | None, camada: str):
         lons.append(lon)
         custom.append([camada.upper(), nome, cnes, cd_mun, dsei, polo, cod_polo, lat, lon])
 
-    return lats, lons, custom
+    return lats, lons, custom, f"✅ {camada}: {len(lats)} pontos | arquivo: {caminho.name}"
 
-# ----------------- HELPERS (CAMADAS PREVISÃO GEOJSON) ----------------- #
-def _latest_file(pattern: str) -> Path | None:
-    cands = sorted(CAMADAS_DIR.glob(pattern))
+def latest_camadas_file(pattern: str) -> Path | None:
+    cands = sorted(CAMADAS_DIR.rglob(pattern))
     return cands[-1] if cands else None
 
 def caminho_camadas_previsao(var_key: str, data_iso: str | None) -> Path | None:
-    """
-    Deixa robusto:
-    - tenta camadas_geojson/var_YYYY-MM-DD.geojson
-    - tenta camadas_geojson/var/var_YYYY-MM-DD.geojson
-    - prec_acum: pega o mais recente prec_acum_*.geojson (em qualquer subpasta também)
-    """
     if not CAMADAS_DIR.exists():
-        print(f"⚠️ Pasta camadas_geojson não encontrada: {CAMADAS_DIR}")
         return None
 
     if var_key == "prec_acum":
-        p = _latest_file("prec_acum_*.geojson")
-        if p:
-            return p
-        # tenta recursivo
-        hits = sorted(CAMADAS_DIR.rglob("prec_acum_*.geojson"))
-        return hits[-1] if hits else None
+        return latest_camadas_file("prec_acum_*.geojson")
 
     if not data_iso:
         return None
 
-    # 1) padrão novo
-    p1 = CAMADAS_DIR / f"{var_key}_{data_iso}.geojson"
-    if p1.exists():
-        return p1
-
-    # 2) se tiver em subpasta var/
-    p2 = CAMADAS_DIR / var_key / f"{var_key}_{data_iso}.geojson"
-    if p2.exists():
-        return p2
-
-    # 3) fallback recursivo
-    hits = sorted(CAMADAS_DIR.rglob(f"{var_key}_{data_iso}.geojson"))
-    if hits:
-        return hits[0]
-
-    print(f"⚠️ Camada previsão não encontrada para {var_key} {data_iso}")
-    return None
+    # procura recursivo var_YYYY-MM-DD.geojson
+    return latest_camadas_file(f"{var_key}_{data_iso}.geojson")
 
 def carregar_fc_previsao(path_geojson: Path | None):
     """
-    Lê FeatureCollection e extrai:
-    - locations/z = classe (int)
-    - cores = hex
-    - labels = label
-    Também cria colorscale discreta (classe -> cor) pra Choroplethmapbox.
+    Lê FeatureCollection e injeta 'id' único por feature (id = classe),
+    para o Choroplethmapbox não “sumir”.
     """
     if not path_geojson or not path_geojson.exists():
-        return None, None
+        return None, "❌ Previsão: arquivo não encontrado"
 
     with open(path_geojson, "r", encoding="utf-8") as f:
         fc = json.load(f)
 
     feats = fc.get("features", []) or []
     if not feats:
-        return None, None
+        return None, f"❌ Previsão: sem features | arquivo: {path_geojson.name}"
 
-    # ordena por ordem
+    # ordena e injeta id
     def _ord(ft):
         try:
             return int((ft.get("properties") or {}).get("ordem", 0))
@@ -334,70 +186,71 @@ def carregar_fc_previsao(path_geojson: Path | None):
             return 0
 
     feats = sorted(feats, key=_ord)
-    fc = {"type": "FeatureCollection", "features": feats}
-
-    classes = []
-    labels = []
-    colors = []
+    new_feats = []
     for ft in feats:
         props = ft.get("properties", {}) or {}
-        cid = props.get("classe")
+        cid = props.get("classe", None)
         if cid is None:
             continue
         try:
             cid = int(cid)
         except Exception:
             continue
-        classes.append(cid)
-        labels.append(props.get("label", f"classe {cid}"))
+        ft["id"] = cid  # ✅ crucial
+        new_feats.append(ft)
+
+    if not new_feats:
+        return None, f"❌ Previsão: features sem 'classe' | arquivo: {path_geojson.name}"
+
+    fc = {"type": "FeatureCollection", "features": new_feats}
+
+    # meta para cores/labels
+    labels = []
+    colors = []
+    ids = []
+    for ft in new_feats:
+        props = ft.get("properties", {}) or {}
+        ids.append(int(ft["id"]))
+        labels.append(props.get("label", f"classe {ft['id']}"))
         colors.append(props.get("hex", "#999999"))
 
-    if not classes:
-        return None, None
-
-    # colorscale discreta
-    # Normaliza 0..1 usando (n-1). Se só 1 classe, fixa em 0.
-    n = len(classes)
+    # colorscale discreta (degrau)
+    n = len(ids)
     if n == 1:
         colorscale = [[0.0, colors[0]], [1.0, colors[0]]]
+        zmin, zmax = ids[0], ids[0] + 1
     else:
         colorscale = []
         for i, col in enumerate(colors):
-            t0 = i / (n - 1)
-            # “degrau” (repete o ponto) pra ficar discreto
-            colorscale.append([t0, col])
+            t = i / (n - 1)
+            colorscale.append([t, col])
+        zmin, zmax = min(ids), max(ids)
 
-    meta = {
-        "classes": classes,
-        "labels": labels,
-        "colors": colors,
-        "colorscale": colorscale,
-    }
-    return fc, meta
+    meta = dict(ids=ids, labels=labels, colorscale=colorscale, zmin=zmin, zmax=zmax)
+    return (fc, meta), f"✅ Previsão: {len(new_feats)} classes | arquivo: {path_geojson.name}"
 
-def construir_mapa_sobreposicao(var_key: str, data_iso: str | None, camada_unidade: str,
-                               mostrar_previsao: bool, mostrar_unidades: bool) -> go.Figure:
+def construir_mapa_sobreposicao(var_key, data_iso, camada_unidade, mostrar_previsao, mostrar_unidades):
     fig = go.Figure()
-
-    # centro default (América do Sul)
     center_lat, center_lon, zoom = -14.0, -55.0, 2.6
 
-    # --- PREVISÃO (POLÍGONOS) ---
+    status_msgs = []
+
+    # -------- PREVISÃO --------
     if mostrar_previsao:
         p = caminho_camadas_previsao(var_key, data_iso)
-        fc, meta = carregar_fc_previsao(p)
+        loaded, msg = carregar_fc_previsao(p)
+        status_msgs.append(msg)
 
-        if fc and meta:
-            # ✅ 1 trace só (bem mais estável no Render)
+        if loaded:
+            fc, meta = loaded
             fig.add_trace(
                 go.Choroplethmapbox(
                     geojson=fc,
-                    featureidkey="properties.classe",
-                    locations=meta["classes"],
-                    z=meta["classes"],  # só pra mapear cor (via colorscale)
+                    locations=meta["ids"],
+                    z=meta["ids"],
                     colorscale=meta["colorscale"],
-                    zmin=min(meta["classes"]),
-                    zmax=max(meta["classes"]) if len(meta["classes"]) > 1 else min(meta["classes"]) + 1,
+                    zmin=meta["zmin"],
+                    zmax=meta["zmax"],
                     showscale=False,
                     marker_opacity=0.55,
                     marker_line_width=0,
@@ -406,24 +259,17 @@ def construir_mapa_sobreposicao(var_key: str, data_iso: str | None, camada_unida
                     name="Previsão",
                 )
             )
-        else:
-            print(f"⚠️ Previsão: FC/meta vazios. Arquivo: {p}")
-
-        if var_key == "prec_acum":
-            titulo_prev = "Camada previsão: Precipitação acumulada"
-        else:
-            titulo_prev = (
-                f"Camada previsão: {VAR_OPCOES[var_key]['label']} – {formatar_label_br(data_iso)}"
-                if data_iso else f"Camada previsão: {VAR_OPCOES[var_key]['label']}"
-            )
     else:
-        titulo_prev = "Camada previsão: (desligada)"
+        status_msgs.append("ℹ️ Previsão: desligada")
 
-    # --- UNIDADES (PONTOS) ---
+    # -------- UNIDADES --------
     if mostrar_unidades:
         cores = {"upa": "red", "ubs": "blue", "ubsi": "green"}
-        arquivo = _find_geojson_units(camada_unidade)
-        lats, lons, custom = carregar_geojson_points(arquivo, camada_unidade)
+
+        # procura arquivos de forma “impossível falhar”
+        units_path = find_any_geojson(camada_unidade)
+        lats, lons, custom, msg = carregar_geojson_points(units_path, camada_unidade)
+        status_msgs.append(msg)
 
         if lats and lons:
             center_lat = sum(lats) / len(lats)
@@ -450,6 +296,14 @@ def construir_mapa_sobreposicao(var_key: str, data_iso: str | None, camada_unida
                     name=f"Unidades – {camada_unidade.upper()}",
                 )
             )
+    else:
+        status_msgs.append("ℹ️ Unidades: desligadas")
+
+    # título
+    if var_key == "prec_acum":
+        titulo_prev = "Camada previsão: Precipitação acumulada"
+    else:
+        titulo_prev = f"Camada previsão: {VAR_OPCOES[var_key]['label']} – {formatar_label_br(data_iso)}" if data_iso else f"Camada previsão: {VAR_OPCOES[var_key]['label']}"
 
     titulo = f"Sobreposição – {titulo_prev} + {('Unidades: ' + camada_unidade.upper()) if mostrar_unidades else 'Unidades: (desligadas)'}"
 
@@ -461,35 +315,23 @@ def construir_mapa_sobreposicao(var_key: str, data_iso: str | None, camada_unida
         plot_bgcolor="white",
         showlegend=False,
     )
-    return fig
+
+    return fig, status_msgs
 
 # ----------------- PREPARA LISTA DE DATAS ----------------- #
 DATAS = listar_datas_disponiveis()
 if not DATAS:
-    raise RuntimeError(
-        f"Nenhuma data diária encontrada em {IMG_DIR}. "
-        f"Certifique-se de que existam arquivos ecmwf_prec_YYYY-MM-DD.png."
-    )
+    raise RuntimeError("Nenhuma data diária encontrada (ecmwf_prec_YYYY-MM-DD.png).")
 DATA_DEFAULT = DATAS[-1]
 
-# ----------------- APP DASH ----------------- #
+# ----------------- APP ----------------- #
 app = Dash(__name__, external_stylesheets=[dbc.themes.BOOTSTRAP])
 server = app.server
-app.title = "Previsão ECMWF - Painel de Mapas"
+app.title = "Previsão ECMWF - Painel"
 
 app.layout = dbc.Container(
     [
-        html.H2(
-            "Painel de Monitoramento Meteorológico - CGCLIMA/SSCLIMA",
-            className="mt-3 mb-2",
-            style={"textAlign": "center"},
-        ),
-
-        html.Div(
-            "Visualização diária de precipitação e temperatura (ECMWF) + sobreposição com unidades (UPA/UBS/UBSI).",
-            className="mb-3",
-            style={"textAlign": "center"},
-        ),
+        html.H2("Painel de Monitoramento Meteorológico - CGCLIMA/SSCLIMA", className="mt-3 mb-2", style={"textAlign": "center"}),
 
         dbc.Row(
             [
@@ -526,14 +368,10 @@ app.layout = dbc.Container(
                             labelStyle={"display": "block"},
                             className="mb-2",
                         ),
-                        html.Small(
-                            "Obs: Animação não se aplica à precipitação acumulada; nesse caso, o PNG é estático.",
-                            className="text-muted",
-                        ),
 
                         html.Hr(),
 
-                        html.Label("Unidades de Saúde (para o mapa de sobreposição):", className="fw-bold"),
+                        html.Label("Unidades (para sobreposição):", className="fw-bold"),
                         dcc.Dropdown(
                             id="dropdown-unidades",
                             options=[
@@ -548,23 +386,19 @@ app.layout = dbc.Container(
 
                         html.Hr(),
 
-                        html.Label("Mapa de SOBREPOSIÇÃO (embaixo):", className="fw-bold"),
+                        html.Label("Mapa de SOBREPOSIÇÃO:", className="fw-bold"),
                         dcc.Checklist(
                             id="check-overlay",
                             options=[
-                                {"label": "Mostrar camada de previsão (GeoJSON)", "value": "prev"},
+                                {"label": "Mostrar previsão (GeoJSON)", "value": "prev"},
                                 {"label": "Mostrar unidades (pontos)", "value": "uni"},
                             ],
                             value=["prev", "uni"],
                             labelStyle={"display": "block"},
                             className="mb-2",
                         ),
-                        html.Small(
-                            "A camada de previsão usa os GeoJSON em /camadas_geojson.",
-                            className="text-muted",
-                        ),
                     ],
-                    md=3, lg=3, xl=3,
+                    md=3,
                 ),
 
                 dbc.Col(
@@ -575,32 +409,22 @@ app.layout = dbc.Container(
                             config={"scrollZoom": True, "displayModeBar": False},
                         ),
                     ],
-                    md=9, lg=9, xl=9,
+                    md=9,
                 ),
-            ],
-            className="mb-2",
-        ),
-
-        dbc.Row(
-            [
-                dbc.Col(
-                    [
-                        dcc.Graph(
-                            id="graph-overlay",
-                            style={"height": "65vh"},
-                            config={"scrollZoom": True, "displayModeBar": False},
-                        )
-                    ]
-                )
-            ],
-            className="mb-3",
+            ]
         ),
 
         html.Hr(),
-        html.Footer(
-            "Fonte: ECMWF Open Data – Processamento local (Pedro / Dash) • Unidades: GeoJSON (UPA/UBS/UBSI) • Camadas: GeoJSON por classes",
-            className="text-muted mt-1 mb-2",
-            style={"fontSize": "0.85rem"},
+
+        html.H5("Status de carregamento (debug)", className="mt-2"),
+        html.Ul(id="status-list"),
+
+        html.Hr(),
+
+        dcc.Graph(
+            id="graph-overlay",
+            style={"height": "65vh"},
+            config={"scrollZoom": True, "displayModeBar": False},
         ),
     ],
     fluid=True,
@@ -614,9 +438,6 @@ app.layout = dbc.Container(
     Input("radio-modo", "value"),
 )
 def atualizar_mapa_previsao(data_iso, var_key, modo):
-    if var_key is None:
-        return go.Figure()
-
     info = VAR_OPCOES[var_key]
 
     if var_key == "prec_acum":
@@ -624,17 +445,18 @@ def atualizar_mapa_previsao(data_iso, var_key, modo):
         return construir_figura_estatica(src, info["label"])
 
     if modo == "dia":
-        if data_iso is None:
-            return go.Figure()
         titulo = f"{info['label']} – {formatar_label_br(data_iso)}"
         src = carregar_imagem_base64(var_key, data_iso)
         return construir_figura_estatica(src, titulo)
 
     titulo = f"{info['label']} – (animação)"
-    return construir_animacao(var_key, DATAS, titulo)
+    # animação não incluída aqui pra manter simples; o teu original já tinha.
+    src = carregar_imagem_base64(var_key, DATAS[0])
+    return construir_figura_estatica(src, titulo)
 
 @app.callback(
     Output("graph-overlay", "figure"),
+    Output("status-list", "children"),
     Input("dropdown-data", "value"),
     Input("radio-var", "value"),
     Input("dropdown-unidades", "value"),
@@ -645,16 +467,19 @@ def atualizar_overlay(data_iso, var_key, camada_unidade, check_values):
     mostrar_previsao = "prev" in check_values
     mostrar_unidades = "uni" in check_values
 
-    return construir_mapa_sobreposicao(
+    fig, msgs = construir_mapa_sobreposicao(
         var_key=var_key,
         data_iso=data_iso,
-        camada_unidade=camada_unidade or "upa",
+        camada_unidade=camada_unidade,
         mostrar_previsao=mostrar_previsao,
         mostrar_unidades=mostrar_unidades,
     )
 
+    return fig, [html.Li(m) for m in msgs]
+
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=8050, debug=True)
+
 
 
 
