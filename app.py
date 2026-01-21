@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """
-Painel Dash para visualizar as figuras geradas pelo ECMWF + mapa interativo das Unidades de Saúde (UPA/UBS/UBSI)
-+ mapa de SOBREPOSIÇÃO (camada previsão GeoJSON + pontos de unidades).
+Painel Dash para visualizar as figuras geradas pelo ECMWF + mapa de SOBREPOSIÇÃO
+(camadas de previsão GeoJSON + pontos de unidades UPA/UBS/UBSI).
 
 Arquivos esperados no MESMO repo (Render):
 - PNGs no mesmo diretório do app.py:
@@ -17,15 +17,14 @@ Arquivos esperados no MESMO repo (Render):
     ubsi.geojson
 
 - Camadas previsão (GeoJSON MultiPolygon por classe):
-    (1) preferencialmente em: camadas_geojson/
-    (2) OU na raiz do repo
+    (1) em camadas_geojson/  OU
+    (2) na raiz do repo
 
-    exemplos:
-      prec_YYYY-MM-DD.geojson
-      tmin_YYYY-MM-DD.geojson
-      tmax_YYYY-MM-DD.geojson
-      tmed_YYYY-MM-DD.geojson
-      prec_acum_YYYY-MM-DD_a_YYYY-MM-DD.geojson
+    prec_YYYY-MM-DD.geojson
+    tmin_YYYY-MM-DD.geojson
+    tmax_YYYY-MM-DD.geojson
+    tmed_YYYY-MM-DD.geojson
+    prec_acum_YYYY-MM-DD_a_YYYY-MM-DD.geojson
 """
 
 from pathlib import Path
@@ -289,10 +288,6 @@ def _latest_file_multi_dirs(pattern: str) -> Path | None:
     return cands[-1] if cands else None
 
 def caminho_camadas_previsao(var_key: str, data_iso: str | None) -> tuple[Path | None, str]:
-    """
-    Procura primeiro em camadas_geojson/ e depois na raiz.
-    Retorna (path, status_msg)
-    """
     if var_key == "prec_acum":
         p = _latest_file_multi_dirs("prec_acum_*.geojson")
         if not p:
@@ -302,13 +297,11 @@ def caminho_camadas_previsao(var_key: str, data_iso: str | None) -> tuple[Path |
     if not data_iso:
         return None, "Previsão: sem data"
 
-    # tenta em camadas_geojson/
     if CAMADAS_DIR.exists():
         p1 = CAMADAS_DIR / f"{var_key}_{data_iso}.geojson"
         if p1.exists():
             return p1, f"Previsão: {p1.name} (camadas_geojson)"
 
-    # tenta na raiz
     p2 = BASE_DIR / f"{var_key}_{data_iso}.geojson"
     if p2.exists():
         return p2, f"Previsão: {p2.name} (raiz)"
@@ -335,20 +328,22 @@ def carregar_geojson_poligonos_por_classe(path_geojson: Path):
 
 def construir_mapa_sobreposicao(var_key: str, data_iso: str | None, camada_unidade: str,
                                mostrar_previsao: bool, mostrar_unidades: bool) -> tuple[go.Figure, str, str]:
-    """
-    Overlay com:
-    - polígonos por classe (MultiPolygon) + legenda (label)
-    - unidades como pontos (preto)
-    - recorte fixo (América do Sul)
-    Retorna (fig, status_prev, status_uni)
-    """
     fig = go.Figure()
 
-    # recorte fixo
     lon_min, lon_max, lat_min, lat_max = EXTENT
-    center_lat = (lat_min + lat_max) / 2.0
-    center_lon = (lon_min + lon_max) / 2.0
-    zoom = 3.1
+
+    # Dois pontos invisíveis pra “forçar” o recorte no Mapbox (sem usar bounds)
+    fig.add_trace(
+        go.Scattermapbox(
+            lat=[lat_min, lat_max],
+            lon=[lon_min, lon_max],
+            mode="markers",
+            marker=dict(size=1, opacity=0),
+            hoverinfo="skip",
+            showlegend=False,
+            name="__fit__",
+        )
+    )
 
     status_prev = "Previsão: desligada"
     status_uni = "Unidades: desligadas"
@@ -366,19 +361,31 @@ def construir_mapa_sobreposicao(var_key: str, data_iso: str | None, camada_unida
             label = props.get("label", f"classe {i}")
             hex_color = props.get("hex", "#999999")
 
+            # garante ordem/feature id
+            ordem = props.get("ordem", i)
+            try:
+                ordem = int(ordem)
+            except Exception:
+                ordem = i
+
+            # garante que properties.ordem exista na feature
+            ft.setdefault("properties", {})
+            ft["properties"]["ordem"] = ordem
+
             gj_one = {"type": "FeatureCollection", "features": [ft]}
 
-            # trick estável pro Choroplethmapbox: 1 geometry -> locations=[0]
+            # ✅ CHAVE CRÍTICA: featureidkey + locations batendo com properties.ordem
             fig.add_trace(
                 go.Choroplethmapbox(
                     geojson=gj_one,
-                    locations=[0],
+                    featureidkey="properties.ordem",
+                    locations=[ordem],
                     z=[1],
                     colorscale=[[0, hex_color], [1, hex_color]],
                     showscale=False,
                     marker_opacity=0.60,
-                    marker_line_width=0,                 # sem borda
-                    marker_line_color="rgba(0,0,0,0)",   # garante sem linha
+                    marker_line_width=0,                 # sem linha de grade
+                    marker_line_color="rgba(0,0,0,0)",   # sem borda
                     name=label,
                     showlegend=True,
                     hovertemplate=f"<b>{label}</b><extra></extra>",
@@ -423,23 +430,20 @@ def construir_mapa_sobreposicao(var_key: str, data_iso: str | None, camada_unida
         if data_iso:
             titulo_prev += f" – {formatar_label_br(data_iso)}"
 
-    titulo = f"Sobreposição – {titulo_prev}"
-
     fig.update_layout(
-        title=dict(text=titulo, x=0.5, xanchor="center"),
+        title=dict(text=f"Sobreposição – {titulo_prev}", x=0.5, xanchor="center"),
         margin=dict(l=0, r=0, t=45, b=0),
         mapbox=dict(
             style="open-street-map",
-            center=dict(lat=center_lat, lon=center_lon),
-            zoom=zoom,
-            # recorta pra não aparecer “mundo”
-            bounds=dict(west=lon_min, east=lon_max, south=lat_min, north=lat_max),
+            center=dict(lat=(lat_min + lat_max) / 2, lon=(lon_min + lon_max) / 2),
+            zoom=3.1,
+            fitbounds="locations",  # ✅ recorte fixo (sem “mundo”)
         ),
         paper_bgcolor="white",
         plot_bgcolor="white",
-        # legenda embaixo (classes + unidades)
         legend=dict(orientation="h", yanchor="bottom", y=-0.12, xanchor="left", x=0.0),
     )
+
     return fig, status_prev, status_uni
 
 # ----------------- PREPARA LISTA DE DATAS ----------------- #
@@ -453,7 +457,7 @@ DATA_DEFAULT = DATAS[-1]
 
 # ----------------- APP DASH ----------------- #
 app = Dash(__name__, external_stylesheets=[dbc.themes.BOOTSTRAP])
-server = app.server  # Render/gunicorn
+server = app.server
 app.title = "Previsão ECMWF - Painel de Mapas"
 
 app.layout = dbc.Container(
@@ -472,7 +476,6 @@ app.layout = dbc.Container(
 
         dbc.Row(
             [
-                # COLUNA ESQUERDA: CONTROLES
                 dbc.Col(
                     [
                         html.H5("Campos de seleção", className="mb-3"),
@@ -547,7 +550,7 @@ app.layout = dbc.Container(
                     md=3, lg=3, xl=3,
                 ),
 
-                # COLUNA DIREITA: APENAS FIGURA PNG (pedido)
+                # ✅ só a figura em cima (sem mapa de unidades ao lado)
                 dbc.Col(
                     [
                         dcc.Graph(
@@ -562,23 +565,18 @@ app.layout = dbc.Container(
             className="mb-2",
         ),
 
-        # DEBUG STATUS (mantém pra você enxergar rapidamente)
         dbc.Row(
             [
                 dbc.Col(
                     [
                         html.H5("Status de carregamento (debug)", className="mt-2"),
-                        html.Ul(
-                            id="debug-status",
-                            style={"fontSize": "0.95rem"}
-                        )
+                        html.Ul(id="debug-status", style={"fontSize": "0.95rem"}),
                     ]
                 )
             ],
             className="mb-2",
         ),
 
-        # MAPA DE SOBREPOSIÇÃO (embaixo, largura total)
         dbc.Row(
             [
                 dbc.Col(
@@ -653,23 +651,21 @@ def atualizar_overlay(data_iso, var_key, camada_unidade, check_values):
         mostrar_unidades=mostrar_unidades,
     )
 
-    # debug bonitinho
     itens = []
     if mostrar_previsao:
-        ok = "✅" if "arquivo não encontrado" not in status_prev.lower() and "sem features" not in status_prev.lower() else "❌"
+        ok = "✅" if ("não encontrado" not in status_prev.lower() and "sem features" not in status_prev.lower()) else "❌"
         itens.append(html.Li([ok + " ", status_prev]))
     else:
         itens.append(html.Li(["ℹ️ Previsão: desligada"]))
 
     if mostrar_unidades:
-        ok = "✅" if "arquivo não encontrado" not in status_uni.lower() else "❌"
+        ok = "✅" if ("não encontrado" not in status_uni.lower()) else "❌"
         itens.append(html.Li([ok + " ", f"Unidades ({(camada_unidade or 'upa')}): {status_uni}"]))
     else:
         itens.append(html.Li(["ℹ️ Unidades: desligadas"]))
 
     return fig, itens
 
-# ----------------- MAIN (LOCAL) ----------------- #
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=8050, debug=True)
 
