@@ -194,13 +194,39 @@ def construir_animacao(var_key: str, datas_iso: list[str], titulo: str) -> go.Fi
 # ----------------- HELPERS (RESOLVER ARQUIVOS NA RAIZ, CASE-INSENSITIVE) ----------------- #
 def resolver_arquivo_geojson_unidades(key: str) -> Path | None:
     """
-    Resolve upa/ubs/ubsi.geojson na raiz, ignorando maiúsculas/minúsculas.
-    Ex.: UBS.geojson vai ser encontrado no Render (Linux).
+    Resolve upa/ubs/ubsi.geojson procurando:
+    1) match exato na raiz (case-insensitive)
+    2) match exato em subpastas (case-insensitive)
+    3) fallback por "contém key" (ex.: ubs_unidades.geojson), se existir
     """
-    target = f"{key}.geojson".lower()
+    if not key:
+        return None
+
+    key = str(key).strip().lower()
+    target = f"{key}.geojson"
+
+    # 1) raiz
     for p in BASE_DIR.glob("*.geojson"):
         if p.name.lower() == target:
             return p
+
+    # 2) subpastas (caso o Render esteja servindo a partir de outro diretório)
+    for p in BASE_DIR.rglob("*.geojson"):
+        if p.name.lower() == target:
+            return p
+
+    # 3) fallback: qualquer arquivo que contenha "key" e termine com .geojson
+    cands = []
+    for p in BASE_DIR.rglob("*.geojson"):
+        nm = p.name.lower()
+        if key in nm and nm.endswith(".geojson"):
+            cands.append(p)
+
+    # se achou algo, pega o mais "curto" (geralmente o nome mais limpo)
+    if cands:
+        cands = sorted(cands, key=lambda x: len(x.name))
+        return cands[0]
+
     return None
 
 # ----------------- HELPERS (UNIDADES) ----------------- #
