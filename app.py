@@ -416,12 +416,16 @@ def construir_mapa_sobreposicao(var_key: str, data_iso: str | None, camada_unida
         title=dict(text=titulo, x=0.5, xanchor="center"),
         margin=dict(l=0, r=0, t=45, b=0),
         mapbox=dict(
-            style="open-street-map",
-            center=dict(lat=center_lat, lon=center_lon),
-            zoom=zoom,
-            # ✅ trava o “recorte” (não deixa abrir o mundo feio)
-            bounds=dict(west=lon_min, east=lon_max, south=lat_min, north=lat_max),
+        style="open-street-map",
+        center=dict(lat=center_lat, lon=center_lon),
+        zoom=zoom,
+        minzoom=2.8,   # 👈 permite afastar mais (ajuste fino)
+        maxzoom=6.5,   # 👈 evita zoom exagerado
+        bounds=dict(
+        west=lon_min, east=lon_max,
+        south=lat_min, north=lat_max
         ),
+        )
         paper_bgcolor="white",
         plot_bgcolor="white",
         showlegend=True,
