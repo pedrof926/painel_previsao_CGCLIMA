@@ -215,17 +215,20 @@ def carregar_geojson_points(caminho: Path | None, camada: str):
     lats, lons, custom = [], [], []
     feats = gj.get("features", [])
 
+    # ✅ ÚNICA CORREÇÃO: aceitar Point/MultiPoint (maiúsculo/minúsculo) e converter coords para float
+    def _to_float(x):
+        try:
+            return float(x)
+        except Exception:
+            return None
+
     for ft in feats:
-        geom = ft.get("geometry", {})
+        geom = ft.get("geometry", {}) or {}
         props = ft.get("properties", {}) or {}
-        if geom.get("type") != "Point":
-            continue
-        coords = geom.get("coordinates", None)
-        if not coords or len(coords) < 2:
-            continue
 
-        lon, lat = coords[0], coords[1]
+        gtype = (geom.get("type") or "").strip().lower()
 
+        # Pega campos de atributos 1x (vale para Point e MultiPoint)
         nome = (
             props.get("nm_fantasia") or props.get("NM_FANTASIA")
             or props.get("nome_da_es") or props.get("NOME_DA_ES")
@@ -238,9 +241,40 @@ def carregar_geojson_points(caminho: Path | None, camada: str):
         polo = props.get("polo_base") or props.get("POLO_BASE") or ""
         cod_polo = props.get("cod_polo") or props.get("COD_POLO") or ""
 
-        lats.append(lat)
-        lons.append(lon)
-        custom.append([camada.upper(), nome, cnes, cd_mun, dsei, polo, cod_polo, lat, lon])
+        if gtype == "point":
+            coords = geom.get("coordinates", None)
+            if not coords or len(coords) < 2:
+                continue
+
+            lon = _to_float(coords[0])
+            lat = _to_float(coords[1])
+            if lon is None or lat is None:
+                continue
+
+            lats.append(lat)
+            lons.append(lon)
+            custom.append([camada.upper(), nome, cnes, cd_mun, dsei, polo, cod_polo, lat, lon])
+
+        elif gtype == "multipoint":
+            coords_list = geom.get("coordinates", None)
+            if not coords_list:
+                continue
+
+            for coords in coords_list:
+                if not coords or len(coords) < 2:
+                    continue
+                lon = _to_float(coords[0])
+                lat = _to_float(coords[1])
+                if lon is None or lat is None:
+                    continue
+
+                lats.append(lat)
+                lons.append(lon)
+                custom.append([camada.upper(), nome, cnes, cd_mun, dsei, polo, cod_polo, lat, lon])
+
+        else:
+            # Ignora outros tipos (LineString/Polygon etc.)
+            continue
 
     return lats, lons, custom
 
@@ -602,6 +636,7 @@ if __name__ == "__main__":
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=8050, debug=True)
+
 
 
 
