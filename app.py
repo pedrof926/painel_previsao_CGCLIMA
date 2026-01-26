@@ -194,10 +194,8 @@ def construir_animacao(var_key: str, datas_iso: list[str], titulo: str) -> go.Fi
 # ----------------- HELPERS (RESOLVER ARQUIVOS NA RAIZ, CASE-INSENSITIVE) ----------------- #
 def resolver_arquivo_geojson_unidades(key: str) -> Path | None:
     """
-    Resolve upa/ubs/ubsi.geojson procurando:
-    1) match exato na raiz (case-insensitive)
-    2) match exato em subpastas (case-insensitive)
-    3) fallback por "contém key" (ex.: ubs_unidades.geojson), se existir
+    Resolve upa/ubs/ubsi.geojson, ignorando maiúsculas/minúsculas e procurando também em subpastas.
+    Isso evita o bug de no Render achar só um arquivo e os outros "não mudarem".
     """
     if not key:
         return None
@@ -205,24 +203,23 @@ def resolver_arquivo_geojson_unidades(key: str) -> Path | None:
     key = str(key).strip().lower()
     target = f"{key}.geojson"
 
-    # 1) raiz
+    # 1) match exato na raiz (mais rápido)
     for p in BASE_DIR.glob("*.geojson"):
         if p.name.lower() == target:
             return p
 
-    # 2) subpastas (caso o Render esteja servindo a partir de outro diretório)
+    # 2) match exato em subpastas (caso o deploy tenha movido os arquivos)
     for p in BASE_DIR.rglob("*.geojson"):
         if p.name.lower() == target:
             return p
 
-    # 3) fallback: qualquer arquivo que contenha "key" e termine com .geojson
+    # 3) fallback: qualquer arquivo que contenha a key (ex.: ubs_unidades.geojson)
     cands = []
     for p in BASE_DIR.rglob("*.geojson"):
         nm = p.name.lower()
         if key in nm and nm.endswith(".geojson"):
             cands.append(p)
 
-    # se achou algo, pega o mais "curto" (geralmente o nome mais limpo)
     if cands:
         cands = sorted(cands, key=lambda x: len(x.name))
         return cands[0]
@@ -628,6 +625,7 @@ if __name__ == "__main__":
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=8050, debug=True)
+
 
 
 
