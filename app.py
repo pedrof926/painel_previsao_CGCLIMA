@@ -419,7 +419,7 @@ def construir_mapa_sobreposicao(var_key: str, data_iso: str | None, camada_unida
         style="open-street-map",
         center=dict(lat=center_lat, lon=center_lon),
         zoom=zoom,
-        minzoom=2.0,   # 👈 permite afastar mais (ajuste fino)
+        minzoom=1.0,   # 👈 permite afastar mais (ajuste fino)
         maxzoom=6.5,   # 👈 evita zoom exagerado
         bounds=dict(
         west=lon_min, east=lon_max,
