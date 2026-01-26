@@ -194,36 +194,13 @@ def construir_animacao(var_key: str, datas_iso: list[str], titulo: str) -> go.Fi
 # ----------------- HELPERS (RESOLVER ARQUIVOS NA RAIZ, CASE-INSENSITIVE) ----------------- #
 def resolver_arquivo_geojson_unidades(key: str) -> Path | None:
     """
-    Resolve upa/ubs/ubsi.geojson, ignorando maiúsculas/minúsculas e procurando também em subpastas.
-    Isso evita o bug de no Render achar só um arquivo e os outros "não mudarem".
+    Resolve upa/ubs/ubsi.geojson na raiz, ignorando maiúsculas/minúsculas.
+    Ex.: UBS.geojson vai ser encontrado no Render (Linux).
     """
-    if not key:
-        return None
-
-    key = str(key).strip().lower()
-    target = f"{key}.geojson"
-
-    # 1) match exato na raiz (mais rápido)
+    target = f"{key}.geojson".lower()
     for p in BASE_DIR.glob("*.geojson"):
         if p.name.lower() == target:
             return p
-
-    # 2) match exato em subpastas (caso o deploy tenha movido os arquivos)
-    for p in BASE_DIR.rglob("*.geojson"):
-        if p.name.lower() == target:
-            return p
-
-    # 3) fallback: qualquer arquivo que contenha a key (ex.: ubs_unidades.geojson)
-    cands = []
-    for p in BASE_DIR.rglob("*.geojson"):
-        nm = p.name.lower()
-        if key in nm and nm.endswith(".geojson"):
-            cands.append(p)
-
-    if cands:
-        cands = sorted(cands, key=lambda x: len(x.name))
-        return cands[0]
-
     return None
 
 # ----------------- HELPERS (UNIDADES) ----------------- #
@@ -625,6 +602,8 @@ if __name__ == "__main__":
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=8050, debug=True)
+
+
 
 
 
