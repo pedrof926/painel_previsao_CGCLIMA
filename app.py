@@ -328,6 +328,7 @@ def construir_mapa_sobreposicao(var_key: str, data_iso: str | None, camada_unida
                         showscale=False,
                         marker_opacity=0.60,
                         marker_line_width=0,
+                        marker_line_color="rgba(0,0,0,0)",  # ✅ borda totalmente transparente
                         name=label,               # ✅ legenda por intervalo
                         legendgroup="previsao",
                         legendrank=ordem,
@@ -345,7 +346,6 @@ def construir_mapa_sobreposicao(var_key: str, data_iso: str | None, camada_unida
 
     # --- UNIDADES (PONTOS) ---
     if mostrar_unidades:
-        cores = {"upa": "red", "ubs": "blue", "ubsi": "green"}
         arq = resolver_arquivo_geojson_unidades(camada_unidade)
         lats, lons, custom = carregar_geojson_points(arq, camada_unidade)
 
@@ -355,7 +355,7 @@ def construir_mapa_sobreposicao(var_key: str, data_iso: str | None, camada_unida
                     lat=lats,
                     lon=lons,
                     mode="markers",
-                    marker=dict(size=7, opacity=0.9, color=cores.get(camada_unidade, "black")),
+                    marker=dict(size=7, opacity=0.9, color="black"),  # ✅ todos os pontos pretos
                     customdata=custom,
                     hovertemplate=(
                         "<b>%{customdata[1]}</b><br>"
@@ -374,6 +374,9 @@ def construir_mapa_sobreposicao(var_key: str, data_iso: str | None, camada_unida
             )
 
     titulo = f"Sobreposição – {titulo_prev} + {('Unidades: ' + camada_unidade.upper()) if mostrar_unidades else 'Unidades: (desligadas)'}"
+
+    # ✅ força redraw do GeoJSON quando muda data/variável/camada/toggles (sem perder o zoom, pq uirevision fica fixo)
+    datarevision_key = f"{var_key}|{data_iso}|{camada_unidade}|{int(mostrar_previsao)}|{int(mostrar_unidades)}"
 
     fig.update_layout(
         title=dict(text=titulo, x=0.5, xanchor="center"),
@@ -398,8 +401,8 @@ def construir_mapa_sobreposicao(var_key: str, data_iso: str | None, camada_unida
             traceorder="normal",
             font=dict(size=11),
         ),
-        # ajuda a manter comportamento consistente ao trocar data/variável
         uirevision="overlay_lock",
+        datarevision=datarevision_key,  # ✅ chave que muda e obriga redesenho
     )
     return fig
 
@@ -599,6 +602,7 @@ if __name__ == "__main__":
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=8050, debug=True)
+
 
 
 
