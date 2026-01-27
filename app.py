@@ -327,7 +327,10 @@ def construir_mapa_sobreposicao(var_key: str, data_iso: str | None, camada_unida
     lon_min, lon_max, lat_min, lat_max = EXTENT
     center_lat = (lat_min + lat_max) / 2
     center_lon = (lon_min + lon_max) / 2
-    zoom = 2.0
+
+    # ✅ ALTERAÇÃO: trava o zoom mínimo igual ao zoom inicial (abre no recorte e só deixa aproximar)
+    zoom_inicial = 3.4
+    zoom_maximo = 6.5
 
     # --- PREVISÃO (POLÍGONOS) ---
     if mostrar_previsao:
@@ -416,16 +419,16 @@ def construir_mapa_sobreposicao(var_key: str, data_iso: str | None, camada_unida
         title=dict(text=titulo, x=0.5, xanchor="center"),
         margin=dict(l=0, r=0, t=45, b=0),
         mapbox=dict(
-        style="open-street-map",
-        center=dict(lat=center_lat, lon=center_lon),
-        zoom=2.0,
-        minzoom=0.8,   # 👈 permite afastar mais (ajuste fino)
-        maxzoom=6.5,   # 👈 evita zoom exagerado
-        bounds=dict(
-        west=lon_min, east=lon_max,
-        south=lat_min, north=lat_max
+            style="open-street-map",
+            center=dict(lat=center_lat, lon=center_lon),
+            zoom=zoom_inicial,       # ✅ abre fixo no recorte
+            minzoom=zoom_inicial,    # ✅ NÃO deixa afastar além do recorte inicial
+            maxzoom=zoom_maximo,     # ✅ deixa aproximar
+            bounds=dict(
+                west=lon_min, east=lon_max,
+                south=lat_min, north=lat_max
+            ),
         ),
-        )
         paper_bgcolor="white",
         plot_bgcolor="white",
         showlegend=True,
@@ -640,6 +643,7 @@ if __name__ == "__main__":
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=8050, debug=True)
+
 
 
 
