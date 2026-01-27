@@ -327,7 +327,7 @@ def construir_mapa_sobreposicao(var_key: str, data_iso: str | None, camada_unida
     lon_min, lon_max, lat_min, lat_max = EXTENT
     center_lat = (lat_min + lat_max) / 2
     center_lon = (lon_min + lon_max) / 2
-    zoom = 3.4
+    zoom = 2.0
 
     # --- PREVISÃO (POLÍGONOS) ---
     if mostrar_previsao:
@@ -418,8 +418,8 @@ def construir_mapa_sobreposicao(var_key: str, data_iso: str | None, camada_unida
         mapbox=dict(
         style="open-street-map",
         center=dict(lat=center_lat, lon=center_lon),
-        zoom=zoom,
-        minzoom=1.0,   # 👈 permite afastar mais (ajuste fino)
+        zoom=2.0,
+        minzoom=0.8,   # 👈 permite afastar mais (ajuste fino)
         maxzoom=6.5,   # 👈 evita zoom exagerado
         bounds=dict(
         west=lon_min, east=lon_max,
