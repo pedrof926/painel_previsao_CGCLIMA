@@ -216,10 +216,12 @@ def carregar_geojson_points(caminho: Path | None, camada: str):
             coords = geom.get("coordinates", None)
             if not coords or len(coords) < 2:
                 continue
+
             lon = _to_float(coords[0])
             lat = _to_float(coords[1])
             if lon is None or lat is None:
                 continue
+
             lats.append(lat)
             lons.append(lon)
             custom.append([camada.upper(), nome, cnes, cd_mun, dsei, polo, cod_polo, lat, lon])
@@ -228,13 +230,16 @@ def carregar_geojson_points(caminho: Path | None, camada: str):
             coords_list = geom.get("coordinates", None)
             if not coords_list:
                 continue
+
             for coords in coords_list:
                 if not coords or len(coords) < 2:
                     continue
+
                 lon = _to_float(coords[0])
                 lat = _to_float(coords[1])
                 if lon is None or lat is None:
                     continue
+
                 lats.append(lat)
                 lons.append(lon)
                 custom.append([camada.upper(), nome, cnes, cd_mun, dsei, polo, cod_polo, lat, lon])
@@ -246,21 +251,9 @@ def _latest_file_in_dirs(pattern: str) -> Path | None:
     cands = []
     for d in CAMADAS_FALLBACK_DIRS:
         if d.exists():
-            # ✅ ALTERAÇÃO (ÚNICA): procurar também em subpastas
-            cands += list(d.rglob(pattern))
+            cands += list(d.glob(pattern))
     cands = sorted(cands)
     return cands[-1] if cands else None
-
-def _resolver_arquivo_case_insensitive(nome_arquivo: str) -> Path | None:
-    alvo = nome_arquivo.lower()
-    for d in CAMADAS_FALLBACK_DIRS:
-        if not d.exists():
-            continue
-        # ✅ ALTERAÇÃO (ÚNICA): procurar também em subpastas
-        for p in d.rglob("*.geojson"):
-            if p.name.lower() == alvo:
-                return p
-    return None
 
 def caminho_camadas_previsao_exata(var_key: str, data_iso: str | None) -> Path | None:
     if var_key == "prec_acum":
@@ -269,7 +262,11 @@ def caminho_camadas_previsao_exata(var_key: str, data_iso: str | None) -> Path |
     if not data_iso:
         return None
 
-    return _resolver_arquivo_case_insensitive(f"{var_key}_{data_iso}.geojson")
+    for d in CAMADAS_FALLBACK_DIRS:
+        p = d / f"{var_key}_{data_iso}.geojson"
+        if p.exists():
+            return p
+    return None
 
 def carregar_geojson_poligonos_por_classe(path_geojson: Path | None):
     if (path_geojson is None) or (not path_geojson.exists()):
@@ -311,15 +308,19 @@ def construir_mapa_sobreposicao(var_key: str, data_iso: str | None, camada_unida
                 hex_color = props.get("hex", "#999999")
                 ordem = int(props.get("ordem", i))
 
+                # ✅ ALTERAÇÃO (ÚNICA): colocar id dentro de properties e usar featureidkey="properties.id"
                 ft2 = dict(ft)
-                ft2["id"] = f"classe_{ordem}"
+                ft2_props = dict(props)
+                ft2_props["id"] = f"classe_{ordem}"
+                ft2["properties"] = ft2_props
+
                 gj_one = {"type": "FeatureCollection", "features": [ft2]}
 
                 fig.add_trace(
                     go.Choroplethmapbox(
                         geojson=gj_one,
-                        featureidkey="id",
-                        locations=[ft2["id"]],
+                        featureidkey="properties.id",  # ✅ ALTERAÇÃO (ÚNICA)
+                        locations=[ft2_props["id"]],
                         z=[1],
                         colorscale=[[0, hex_color], [1, hex_color]],
                         showscale=False,
@@ -596,6 +597,7 @@ def atualizar_overlay(data_iso, var_key, camada_unidade, check_values):
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=8050, debug=True)
+
 
 
 
