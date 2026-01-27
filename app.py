@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-""""
+"""
 Painel Dash para visualizar as figuras geradas pelo ECMWF
 + mapa de SOBREPOSIÇÃO (camada previsão GeoJSON + pontos de unidades UPA/UBS/UBSI).
 
@@ -287,6 +287,17 @@ def _latest_file_in_dirs(pattern: str) -> Path | None:
     cands = sorted(cands)
     return cands[-1] if cands else None
 
+# ✅ ALTERAÇÃO (ÚNICA): resolver camadas da previsão ignorando maiúsc/minúsc no Render
+def _resolver_arquivo_case_insensitive(nome_arquivo: str) -> Path | None:
+    alvo = nome_arquivo.lower()
+    for d in CAMADAS_FALLBACK_DIRS:
+        if not d.exists():
+            continue
+        for p in d.glob("*.geojson"):
+            if p.name.lower() == alvo:
+                return p
+    return None
+
 def caminho_camadas_previsao_exata(var_key: str, data_iso: str | None) -> Path | None:
     """
     IMPORTANTE: usa data EXATA.
@@ -299,11 +310,8 @@ def caminho_camadas_previsao_exata(var_key: str, data_iso: str | None) -> Path |
     if not data_iso:
         return None
 
-    for d in CAMADAS_FALLBACK_DIRS:
-        p = d / f"{var_key}_{data_iso}.geojson"
-        if p.exists():
-            return p
-    return None  # não inventa outro arquivo
+    # ✅ resolve ignorando maiúsc/minúsc (Render)
+    return _resolver_arquivo_case_insensitive(f"{var_key}_{data_iso}.geojson")
 
 def carregar_geojson_poligonos_por_classe(path_geojson: Path | None):
     if (path_geojson is None) or (not path_geojson.exists()):
@@ -416,16 +424,16 @@ def construir_mapa_sobreposicao(var_key: str, data_iso: str | None, camada_unida
         title=dict(text=titulo, x=0.5, xanchor="center"),
         margin=dict(l=0, r=0, t=45, b=0),
         mapbox=dict(
-        style="open-street-map",
-        center=dict(lat=center_lat, lon=center_lon),
-        zoom=2.0,
-        minzoom=0.8,   # 👈 permite afastar mais (ajuste fino)
-        maxzoom=6.5,   # 👈 evita zoom exagerado
-        bounds=dict(
-        west=lon_min, east=lon_max,
-        south=lat_min, north=lat_max
+            style="open-street-map",
+            center=dict(lat=center_lat, lon=center_lon),
+            zoom=2.0,
+            minzoom=0.8,   # 👈 permite afastar mais (ajuste fino)
+            maxzoom=6.5,   # 👈 evita zoom exagerado
+            bounds=dict(
+                west=lon_min, east=lon_max,
+                south=lat_min, north=lat_max
+            ),
         ),
-        )
         paper_bgcolor="white",
         plot_bgcolor="white",
         showlegend=True,
@@ -640,6 +648,7 @@ if __name__ == "__main__":
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=8050, debug=True)
+
 
 
 
