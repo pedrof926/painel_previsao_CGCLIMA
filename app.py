@@ -2,12 +2,35 @@
 """
 Painel Dash para visualizar as figuras geradas pelo ECMWF
 + mapa de SOBREPOSIÇÃO (camada previsão GeoJSON + pontos de unidades UPA/UBS/UBSI).
+
+Arquivos esperados no MESMO repo (Render):
+- PNGs na raiz:
+    ecmwf_prec_YYYY-MM-DD.png
+    ecmwf_tmin_YYYY-MM-DD.png
+    ecmwf_tmax_YYYY-MM-DD.png
+    ecmwf_tmed_YYYY-MM-DD.png
+    ecmwf_prec_acumulada_YYYY-MM-DD_a_YYYY-MM-DD.png
+
+- Unidades (Point GeoJSON) na raiz:
+    upa.geojson
+    ubs.geojson
+    ubsi.geojson
+  (pode estar com letras maiúsculas/minúsculas variadas; o app resolve)
+
+- Camadas previsão (GeoJSON MultiPolygon por classe) em:
+    camadas_geojson/  OU na raiz
+      prec_YYYY-MM-DD.geojson
+      tmin_YYYY-MM-DD.geojson
+      tmax_YYYY-MM-DD.geojson
+      tmed_YYYY-MM-DD.geojson
+      prec_acum_YYYY-MM-DD_a_YYYY-MM-DD.geojson
 """
 
 from pathlib import Path
 import base64
 import json
 from datetime import datetime
+import re
 
 from dash import Dash, html, dcc, Input, Output
 import dash_bootstrap_components as dbc
@@ -170,6 +193,10 @@ def construir_animacao(var_key: str, datas_iso: list[str], titulo: str) -> go.Fi
 
 # ----------------- HELPERS (RESOLVER ARQUIVOS NA RAIZ, CASE-INSENSITIVE) ----------------- #
 def resolver_arquivo_geojson_unidades(key: str) -> Path | None:
+    """
+    Resolve upa/ubs/ubsi.geojson na raiz, ignorando maiúsculas/minúsculas.
+    Ex.: UBS.geojson vai ser encontrado no Render (Linux).
+    """
     target = f"{key}.geojson".lower()
     for p in BASE_DIR.glob("*.geojson"):
         if p.name.lower() == target:
@@ -188,6 +215,7 @@ def carregar_geojson_points(caminho: Path | None, camada: str):
     lats, lons, custom = [], [], []
     feats = gj.get("features", [])
 
+    # ✅ ÚNICA CORREÇÃO: aceitar Point/MultiPoint (maiúsculo/minúsculo) e converter coords para float
     def _to_float(x):
         try:
             return float(x)
@@ -200,6 +228,7 @@ def carregar_geojson_points(caminho: Path | None, camada: str):
 
         gtype = (geom.get("type") or "").strip().lower()
 
+        # Pega campos de atributos 1x (vale para Point e MultiPoint)
         nome = (
             props.get("nm_fantasia") or props.get("NM_FANTASIA")
             or props.get("nome_da_es") or props.get("NOME_DA_ES")
@@ -234,7 +263,6 @@ def carregar_geojson_points(caminho: Path | None, camada: str):
             for coords in coords_list:
                 if not coords or len(coords) < 2:
                     continue
-
                 lon = _to_float(coords[0])
                 lat = _to_float(coords[1])
                 if lon is None or lat is None:
@@ -243,6 +271,10 @@ def carregar_geojson_points(caminho: Path | None, camada: str):
                 lats.append(lat)
                 lons.append(lon)
                 custom.append([camada.upper(), nome, cnes, cd_mun, dsei, polo, cod_polo, lat, lon])
+
+        else:
+            # Ignora outros tipos (LineString/Polygon etc.)
+            continue
 
     return lats, lons, custom
 
@@ -256,6 +288,11 @@ def _latest_file_in_dirs(pattern: str) -> Path | None:
     return cands[-1] if cands else None
 
 def caminho_camadas_previsao_exata(var_key: str, data_iso: str | None) -> Path | None:
+    """
+    IMPORTANTE: usa data EXATA.
+    - prec/tmin/tmax/tmed: var_YYYY-MM-DD.geojson
+    - prec_acum: prec_acum_YYYY-MM-DD_a_YYYY-MM-DD.geojson (mais recente)
+    """
     if var_key == "prec_acum":
         return _latest_file_in_dirs("prec_acum_*.geojson")
 
@@ -266,7 +303,7 @@ def caminho_camadas_previsao_exata(var_key: str, data_iso: str | None) -> Path |
         p = d / f"{var_key}_{data_iso}.geojson"
         if p.exists():
             return p
-    return None
+    return None  # não inventa outro arquivo
 
 def carregar_geojson_poligonos_por_classe(path_geojson: Path | None):
     if (path_geojson is None) or (not path_geojson.exists()):
@@ -290,12 +327,14 @@ def construir_mapa_sobreposicao(var_key: str, data_iso: str | None, camada_unida
     lon_min, lon_max, lat_min, lat_max = EXTENT
     center_lat = (lat_min + lat_max) / 2
     center_lon = (lon_min + lon_max) / 2
+    zoom = 2.0
 
     # --- PREVISÃO (POLÍGONOS) ---
     if mostrar_previsao:
         p = caminho_camadas_previsao_exata(var_key, data_iso)
         feats = carregar_geojson_poligonos_por_classe(p)
 
+        # Se não achou o arquivo da data, não plota nada (e o título deixa claro)
         if not feats:
             if var_key == "prec_acum":
                 titulo_prev = "Camada previsão: Precipitação acumulada (arquivo não encontrado)"
@@ -308,26 +347,25 @@ def construir_mapa_sobreposicao(var_key: str, data_iso: str | None, camada_unida
                 hex_color = props.get("hex", "#999999")
                 ordem = int(props.get("ordem", i))
 
-                # ✅ ALTERAÇÃO (ÚNICA): colocar id dentro de properties e usar featureidkey="properties.id"
+                # ✅ ALTERAÇÃO ÚNICA: usar properties.id (mais robusto no Plotly)
                 ft2 = dict(ft)
                 ft2_props = dict(props)
                 ft2_props["id"] = f"classe_{ordem}"
                 ft2["properties"] = ft2_props
-
                 gj_one = {"type": "FeatureCollection", "features": [ft2]}
 
                 fig.add_trace(
                     go.Choroplethmapbox(
                         geojson=gj_one,
-                        featureidkey="properties.id",  # ✅ ALTERAÇÃO (ÚNICA)
-                        locations=[ft2_props["id"]],
+                        featureidkey="properties.id",   # ✅ ALTERAÇÃO ÚNICA
+                        locations=[ft2_props["id"]],    # ✅ ALTERAÇÃO ÚNICA
                         z=[1],
                         colorscale=[[0, hex_color], [1, hex_color]],
                         showscale=False,
                         marker_opacity=0.60,
                         marker_line_width=0,
-                        marker_line_color="rgba(0,0,0,0)",
-                        name=label,
+                        marker_line_color="rgba(0,0,0,0)",  # ✅ borda totalmente transparente
+                        name=label,               # ✅ legenda por intervalo
                         legendgroup="previsao",
                         legendrank=ordem,
                         hovertemplate=f"<b>{label}</b><extra></extra>",
@@ -353,7 +391,7 @@ def construir_mapa_sobreposicao(var_key: str, data_iso: str | None, camada_unida
                     lat=lats,
                     lon=lons,
                     mode="markers",
-                    marker=dict(size=7, opacity=0.9, color="black"),
+                    marker=dict(size=7, opacity=0.9, color="black"),  # ✅ todos os pontos pretos
                     customdata=custom,
                     hovertemplate=(
                         "<b>%{customdata[1]}</b><br>"
@@ -372,22 +410,25 @@ def construir_mapa_sobreposicao(var_key: str, data_iso: str | None, camada_unida
             )
 
     titulo = f"Sobreposição – {titulo_prev} + {('Unidades: ' + camada_unidade.upper()) if mostrar_unidades else 'Unidades: (desligadas)'}"
+
+    # ✅ força redraw do GeoJSON quando muda data/variável/camada/toggles (sem perder o zoom, pq uirevision fica fixo)
     datarevision_key = f"{var_key}|{data_iso}|{camada_unidade}|{int(mostrar_previsao)}|{int(mostrar_unidades)}"
 
     fig.update_layout(
         title=dict(text=titulo, x=0.5, xanchor="center"),
         margin=dict(l=0, r=0, t=45, b=0),
         mapbox=dict(
-            style="open-street-map",
-            center=dict(lat=center_lat, lon=center_lon),
-            zoom=2.0,
-            minzoom=0.8,
-            maxzoom=6.5,
-            bounds=dict(
-                west=lon_min, east=lon_max,
-                south=lat_min, north=lat_max
-            ),
+        style="open-street-map",
+        center=dict(lat=center_lat, lon=center_lon),
+        zoom=2.0,
+        minzoom=0.8,   # 👈 permite afastar mais (ajuste fino)
+        maxzoom=6.5,   # 👈 evita zoom exagerado
+        bounds=dict(
+        west=lon_min, east=lon_max,
+        south=lat_min, north=lat_max
         ),
+        )
+        ,  # <- mantém exatamente a estrutura que você tinha (só garantindo vírgula correta)
         paper_bgcolor="white",
         plot_bgcolor="white",
         showlegend=True,
@@ -402,7 +443,7 @@ def construir_mapa_sobreposicao(var_key: str, data_iso: str | None, camada_unida
             font=dict(size=11),
         ),
         uirevision="overlay_lock",
-        datarevision=datarevision_key,
+        datarevision=datarevision_key,  # ✅ chave que muda e obriga redesenho
     )
     return fig
 
@@ -509,6 +550,7 @@ app.layout = dbc.Container(
                     md=3, lg=3, xl=3,
                 ),
 
+                # ✅ só a FIGURA à direita (sem mapa de unidades ao lado)
                 dbc.Col(
                     [
                         dcc.Graph(
@@ -597,6 +639,11 @@ def atualizar_overlay(data_iso, var_key, camada_unidade, check_values):
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=8050, debug=True)
+
+
+if __name__ == "__main__":
+    app.run(host="0.0.0.0", port=8050, debug=True)
+
 
 
 
