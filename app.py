@@ -30,7 +30,6 @@ from pathlib import Path
 import base64
 import json
 from datetime import datetime
-from typing import Optional, List, Tuple
 
 from dash import Dash, html, dcc, Input, Output
 import dash_bootstrap_components as dbc
@@ -57,7 +56,7 @@ VAR_OPCOES = {
 }
 
 # ----------------- HELPERS (PNG) ----------------- #
-def listar_datas_disponiveis() -> List[str]:
+def listar_datas_disponiveis():
     datas = set()
     for img_path in IMG_DIR.glob("ecmwf_prec_*.png"):
         stem = img_path.stem
@@ -73,7 +72,7 @@ def formatar_label_br(data_iso: str) -> str:
     dt = datetime.strptime(data_iso, "%Y-%m-%d")
     return dt.strftime("%d/%m/%Y")
 
-def carregar_imagem_base64(var_key: str, data_iso: Optional[str]) -> str:
+def carregar_imagem_base64(var_key: str, data_iso: str | None) -> str:
     info = VAR_OPCOES[var_key]
     prefix = info["prefix"]
 
@@ -120,7 +119,7 @@ def construir_figura_estatica(src: str, titulo: str) -> go.Figure:
     )
     return fig
 
-def construir_animacao(var_key: str, datas_iso: List[str], titulo: str) -> go.Figure:
+def construir_animacao(var_key: str, datas_iso: list[str], titulo: str) -> go.Figure:
     if not datas_iso:
         return construir_figura_estatica("", "Sem dados para animar")
 
@@ -192,7 +191,7 @@ def construir_animacao(var_key: str, datas_iso: List[str], titulo: str) -> go.Fi
     return fig
 
 # ----------------- HELPERS (RESOLVER ARQUIVOS NA RAIZ, CASE-INSENSITIVE) ----------------- #
-def resolver_arquivo_geojson_unidades(key: str) -> Optional[Path]:
+def resolver_arquivo_geojson_unidades(key: str) -> Path | None:
     target = f"{key}.geojson".lower()
     for p in BASE_DIR.glob("*.geojson"):
         if p.name.lower() == target:
@@ -200,7 +199,7 @@ def resolver_arquivo_geojson_unidades(key: str) -> Optional[Path]:
     return None
 
 # ----------------- HELPERS (UNIDADES) ----------------- #
-def carregar_geojson_points(caminho: Optional[Path], camada: str):
+def carregar_geojson_points(caminho: Path | None, camada: str):
     if (caminho is None) or (not caminho.exists()):
         print(f"⚠️ GeoJSON não encontrado (unidades): {camada}")
         return [], [], []
@@ -261,7 +260,7 @@ def carregar_geojson_points(caminho: Optional[Path], camada: str):
     return lats, lons, custom
 
 # ----------------- HELPERS (CAMADAS PREVISÃO) ----------------- #
-def _latest_file_in_dirs(pattern: str) -> Optional[Path]:
+def _latest_file_in_dirs(pattern: str) -> Path | None:
     cands = []
     for d in CAMADAS_FALLBACK_DIRS:
         if d.exists():
@@ -269,7 +268,7 @@ def _latest_file_in_dirs(pattern: str) -> Optional[Path]:
     cands = sorted(cands)
     return cands[-1] if cands else None
 
-def caminho_camadas_previsao_exata(var_key: str, data_iso: Optional[str]) -> Optional[Path]:
+def caminho_camadas_previsao_exata(var_key: str, data_iso: str | None) -> Path | None:
     if var_key == "prec_acum":
         return _latest_file_in_dirs("prec_acum_*.geojson")
 
@@ -282,7 +281,7 @@ def caminho_camadas_previsao_exata(var_key: str, data_iso: Optional[str]) -> Opt
             return p
     return None
 
-def carregar_geojson_poligonos_por_classe(path_geojson: Optional[Path]):
+def carregar_geojson_poligonos_por_classe(path_geojson: Path | None):
     if (path_geojson is None) or (not path_geojson.exists()):
         return []
     with open(path_geojson, "r", encoding="utf-8") as f:
@@ -298,27 +297,20 @@ def carregar_geojson_poligonos_por_classe(path_geojson: Optional[Path]):
     return sorted(feats, key=_ord)
 
 # ----------------- MAPA OVERLAY ----------------- #
-def construir_mapa_sobreposicao(
-    var_key: str,
-    data_iso: Optional[str],
-    camada_unidade: str,
-    mostrar_previsao: bool,
-    mostrar_unidades: bool
-) -> go.Figure:
+def construir_mapa_sobreposicao(var_key: str, data_iso: str | None, camada_unidade: str,
+                               mostrar_previsao: bool, mostrar_unidades: bool) -> go.Figure:
     lon_min, lon_max, lat_min, lat_max = EXTENT
     center_lat = (lat_min + lat_max) / 2
     center_lon = (lon_min + lon_max) / 2
 
     fig = go.Figure()
 
-    # ✅ Layout Mapbox sempre presente
+    # ✅ REMOVIDO minzoom/maxzoom (Plotly 6+ não aceita no layout.mapbox)
     fig.update_layout(
         mapbox=dict(
             style="open-street-map",
             center=dict(lat=center_lat, lon=center_lon),
             zoom=2.0,
-            minzoom=0.8,
-            maxzoom=6.5,
             bounds=dict(west=lon_min, east=lon_max, south=lat_min, north=lat_max),
             layers=[],
         ),
@@ -339,7 +331,7 @@ def construir_mapa_sobreposicao(
         uirevision="overlay_lock",
     )
 
-    # ✅ Âncora invisível pra nunca virar "gráfico de eixos"
+    # âncora invisível pra garantir mapbox sempre
     fig.add_trace(
         go.Scattermapbox(
             lat=[center_lat],
@@ -371,7 +363,7 @@ def construir_mapa_sobreposicao(
                         if data_iso else "Camada previsão: (arquivo não encontrado)"
                     )
             else:
-                # 1) Tenta Plotly Choroplethmapbox do jeito correto (featureidkey/locations)
+                # tenta Choroplethmapbox “correto”
                 try:
                     for i, ft in enumerate(feats):
                         props = ft.get("properties", {}) or {}
@@ -404,11 +396,9 @@ def construir_mapa_sobreposicao(
                                 showlegend=True,
                             )
                         )
-
                     print("✅ Overlay previsão: Choroplethmapbox OK")
-
                 except Exception as e_choro:
-                    # 2) Fallback ultra-estável no Render: mapbox.layers
+                    # fallback estável: mapbox.layers
                     print(f"⚠️ Choroplethmapbox falhou, usando fallback mapbox.layers: {repr(e_choro)}")
                     layers = []
                     for i, ft in enumerate(feats):
@@ -425,7 +415,7 @@ def construir_mapa_sobreposicao(
                             "opacity": 0.60,
                         })
 
-                        # legenda “fake” (só pra listar as classes)
+                        # legenda “fake” pra listar classes
                         fig.add_trace(
                             go.Scattermapbox(
                                 lat=[center_lat],
@@ -439,18 +429,13 @@ def construir_mapa_sobreposicao(
                                 showlegend=True,
                             )
                         )
-
                     fig.update_layout(mapbox=dict(layers=layers))
                     print("✅ Overlay previsão: mapbox.layers OK")
 
                 if var_key == "prec_acum":
                     titulo_prev = "Camada previsão: Precipitação acumulada"
                 else:
-                    titulo_prev = (
-                        f"Camada previsão: {VAR_OPCOES[var_key]['label']} – {formatar_label_br(data_iso)}"
-                        if data_iso else f"Camada previsão: {VAR_OPCOES[var_key]['label']}"
-                    )
-
+                    titulo_prev = f"Camada previsão: {VAR_OPCOES[var_key]['label']} – {formatar_label_br(data_iso)}" if data_iso else f"Camada previsão: {VAR_OPCOES[var_key]['label']}"
         except Exception as e:
             print(f"❌ ERRO no overlay (previsão): {repr(e)}")
             titulo_prev = "Camada previsão: (erro ao carregar)"
@@ -489,12 +474,9 @@ def construir_mapa_sobreposicao(
         except Exception as e:
             print(f"❌ ERRO no overlay (unidades): {repr(e)}")
 
-    titulo = (
-        f"Sobreposição – {titulo_prev} + "
-        f"{('Unidades: ' + camada_unidade.upper()) if mostrar_unidades else 'Unidades: (desligadas)'}"
-    )
-
+    titulo = f"Sobreposição – {titulo_prev} + {('Unidades: ' + camada_unidade.upper()) if mostrar_unidades else 'Unidades: (desligadas)'}"
     datarevision_key = f"{var_key}|{data_iso}|{camada_unidade}|{int(mostrar_previsao)}|{int(mostrar_unidades)}"
+
     fig.update_layout(
         title=dict(text=titulo, x=0.5, xanchor="center"),
         datarevision=datarevision_key,
@@ -692,6 +674,7 @@ def atualizar_overlay(data_iso, var_key, camada_unidade, check_values):
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=8050, debug=True)
+
 
 
 
