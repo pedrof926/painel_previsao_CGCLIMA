@@ -304,6 +304,7 @@ def construir_mapa_sobreposicao(var_key: str, data_iso: str | None, camada_unida
     center_lon = (lon_min + lon_max) / 2
 
     fig = go.Figure()
+
     fig.update_layout(
         mapbox=dict(
             style="open-street-map",
@@ -312,6 +313,7 @@ def construir_mapa_sobreposicao(var_key: str, data_iso: str | None, camada_unida
             minzoom=0.8,
             maxzoom=6.5,
             bounds=dict(west=lon_min, east=lon_max, south=lat_min, north=lat_max),
+            layers=[],  # ✅ vamos preencher com as classes
         ),
         margin=dict(l=0, r=0, t=45, b=0),
         paper_bgcolor="white",
@@ -330,7 +332,7 @@ def construir_mapa_sobreposicao(var_key: str, data_iso: str | None, camada_unida
         uirevision="overlay_lock",
     )
 
-    # ✅ ÂNCORA MAPBOX (evita virar gráfico com eixos quando algo falha)
+    # ✅ ÂNCORA: garante que sempre será mapbox, nunca gráfico com eixos
     fig.add_trace(
         go.Scattermapbox(
             lat=[center_lat], lon=[center_lon],
@@ -344,7 +346,7 @@ def construir_mapa_sobreposicao(var_key: str, data_iso: str | None, camada_unida
 
     titulo_prev = "Camada previsão: (desligada)"
 
-    # --- PREVISÃO (POLÍGONOS) ---
+    # --- PREVISÃO (POLÍGONOS) - usando mapbox.layers (robusto no Render) ---
     if mostrar_previsao:
         try:
             p = caminho_camadas_previsao_exata(var_key, data_iso)
@@ -361,35 +363,43 @@ def construir_mapa_sobreposicao(var_key: str, data_iso: str | None, camada_unida
                         if data_iso else "Camada previsão: (arquivo não encontrado)"
                     )
             else:
-                # ✅ PLOT ROBUSTO: cada feature como FC de 1 feature, sem featureidkey
+                # monta layers
+                layers = []
                 for i, ft in enumerate(feats):
                     props = ft.get("properties", {}) or {}
                     label = props.get("label", f"classe {i}")
                     hex_color = props.get("hex", "#999999")
                     ordem = int(props.get("ordem", i))
 
+                    layers.append({
+                        "sourcetype": "geojson",
+                        "source": {"type": "FeatureCollection", "features": [ft]},
+                        "type": "fill",
+                        "color": hex_color,
+                        "opacity": 0.60
+                    })
+
+                    # legenda "fake" (um trace invisível, só pra aparecer o nome)
                     fig.add_trace(
-                        go.Choroplethmapbox(
-                            geojson={"type": "FeatureCollection", "features": [ft]},
-                            locations=[0],  # dummy
-                            z=[1],
-                            colorscale=[[0, hex_color], [1, hex_color]],
-                            showscale=False,
-                            marker_opacity=0.60,
-                            marker_line_width=0,
-                            marker_line_color="rgba(0,0,0,0)",
+                        go.Scattermapbox(
+                            lat=[center_lat], lon=[center_lon],
+                            mode="markers",
+                            marker=dict(size=10, color=hex_color, opacity=0),
                             name=label,
                             legendgroup="previsao",
                             legendrank=ordem,
-                            hovertemplate=f"<b>{label}</b><extra></extra>",
+                            hoverinfo="skip",
                             showlegend=True,
                         )
                     )
+
+                fig.update_layout(mapbox=dict(layers=layers))
 
                 if var_key == "prec_acum":
                     titulo_prev = "Camada previsão: Precipitação acumulada"
                 else:
                     titulo_prev = f"Camada previsão: {VAR_OPCOES[var_key]['label']} – {formatar_label_br(data_iso)}" if data_iso else f"Camada previsão: {VAR_OPCOES[var_key]['label']}"
+
         except Exception as e:
             print(f"❌ ERRO no overlay (previsão): {repr(e)}")
             titulo_prev = "Camada previsão: (erro ao carregar)"
@@ -628,6 +638,7 @@ def atualizar_overlay(data_iso, var_key, camada_unidade, check_values):
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=8050, debug=True)
+
 
 
 
