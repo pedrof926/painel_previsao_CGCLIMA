@@ -364,24 +364,23 @@ def construir_mapa_sobreposicao(var_key: str, data_iso: str | None, camada_unida
                     gj_one = {"type": "FeatureCollection", "features": [ft2]}
 
                     fig.add_trace(
-                        go.Choroplethmapbox(
-                            geojson=gj_one,
-                            featureidkey="properties.id",
-                            locations=[ft2_props["id"]],
-                            z=[1],
-                            colorscale=[[0, hex_color], [1, hex_color]],
-                            showscale=False,
-                            marker_opacity=0.60,
-                            marker_line_width=0,
-                            marker_line_color="rgba(0,0,0,0)",
-                            name=label,
-                            legendgroup="previsao",
-                            legendrank=ordem,
-                            hovertemplate=f"<b>{label}</b><extra></extra>",
-                            showlegend=True,
-                        )
-                    )
-
+                    go.Choroplethmapbox(
+                    geojson={"type": "FeatureCollection", "features": [ft]},
+                    locations=[0],  # dummy
+                    z=[1],
+                    colorscale=[[0, hex_color], [1, hex_color]],
+                    showscale=False,
+                    marker_opacity=0.60,
+                    marker_line_width=0,
+                    marker_line_color="rgba(0,0,0,0)",
+                    name=label,
+                    legendgroup="previsao",
+                    legendrank=ordem,
+                hovertemplate=f"<b>{label}</b><extra></extra>",
+                showlegend=True,
+                )
+             )
+                    
                 if var_key == "prec_acum":
                     titulo_prev = "Camada previsão: Precipitação acumulada"
                 else:
