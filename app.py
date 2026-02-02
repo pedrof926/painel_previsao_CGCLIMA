@@ -303,7 +303,6 @@ def construir_mapa_sobreposicao(var_key: str, data_iso: str | None, camada_unida
     center_lat = (lat_min + lat_max) / 2
     center_lon = (lon_min + lon_max) / 2
 
-    # ✅ Sempre cria um FIGURE já com MAPBOX no layout (mesmo se tudo falhar)
     fig = go.Figure()
     fig.update_layout(
         mapbox=dict(
@@ -331,6 +330,18 @@ def construir_mapa_sobreposicao(var_key: str, data_iso: str | None, camada_unida
         uirevision="overlay_lock",
     )
 
+    # ✅ ÂNCORA MAPBOX (evita virar gráfico com eixos quando algo falha)
+    fig.add_trace(
+        go.Scattermapbox(
+            lat=[center_lat], lon=[center_lon],
+            mode="markers",
+            marker=dict(size=1, opacity=0),
+            hoverinfo="skip",
+            showlegend=False,
+            name="_base"
+        )
+    )
+
     titulo_prev = "Camada previsão: (desligada)"
 
     # --- PREVISÃO (POLÍGONOS) ---
@@ -350,43 +361,36 @@ def construir_mapa_sobreposicao(var_key: str, data_iso: str | None, camada_unida
                         if data_iso else "Camada previsão: (arquivo não encontrado)"
                     )
             else:
+                # ✅ PLOT ROBUSTO: cada feature como FC de 1 feature, sem featureidkey
                 for i, ft in enumerate(feats):
                     props = ft.get("properties", {}) or {}
                     label = props.get("label", f"classe {i}")
                     hex_color = props.get("hex", "#999999")
                     ordem = int(props.get("ordem", i))
 
-                    # ✅ usa properties.id
-                    ft2 = dict(ft)
-                    ft2_props = dict(props)
-                    ft2_props["id"] = f"classe_{ordem}"
-                    ft2["properties"] = ft2_props
-                    gj_one = {"type": "FeatureCollection", "features": [ft2]}
-
                     fig.add_trace(
-                    go.Choroplethmapbox(
-                    geojson={"type": "FeatureCollection", "features": [ft]},
-                    locations=[0],  # dummy
-                    z=[1],
-                    colorscale=[[0, hex_color], [1, hex_color]],
-                    showscale=False,
-                    marker_opacity=0.60,
-                    marker_line_width=0,
-                    marker_line_color="rgba(0,0,0,0)",
-                    name=label,
-                    legendgroup="previsao",
-                    legendrank=ordem,
-                hovertemplate=f"<b>{label}</b><extra></extra>",
-                showlegend=True,
-                )
-             )
-                    
+                        go.Choroplethmapbox(
+                            geojson={"type": "FeatureCollection", "features": [ft]},
+                            locations=[0],  # dummy
+                            z=[1],
+                            colorscale=[[0, hex_color], [1, hex_color]],
+                            showscale=False,
+                            marker_opacity=0.60,
+                            marker_line_width=0,
+                            marker_line_color="rgba(0,0,0,0)",
+                            name=label,
+                            legendgroup="previsao",
+                            legendrank=ordem,
+                            hovertemplate=f"<b>{label}</b><extra></extra>",
+                            showlegend=True,
+                        )
+                    )
+
                 if var_key == "prec_acum":
                     titulo_prev = "Camada previsão: Precipitação acumulada"
                 else:
                     titulo_prev = f"Camada previsão: {VAR_OPCOES[var_key]['label']} – {formatar_label_br(data_iso)}" if data_iso else f"Camada previsão: {VAR_OPCOES[var_key]['label']}"
         except Exception as e:
-            # ✅ não deixa quebrar o mapa
             print(f"❌ ERRO no overlay (previsão): {repr(e)}")
             titulo_prev = "Camada previsão: (erro ao carregar)"
 
@@ -624,6 +628,7 @@ def atualizar_overlay(data_iso, var_key, camada_unidade, check_values):
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=8050, debug=True)
+
 
 
 
