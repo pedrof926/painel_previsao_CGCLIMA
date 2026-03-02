@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 """
 Painel Dash para visualizar as figuras geradas pelo ECMWF
-+ mapa de SOBREPOSIÇÃO (camada previsão GeoJSON + pontos de unidades UPA/UBS/UBSI).
-+ camada EXTRA: Áreas de risco SGB (polígonos + hover com atributos)
++ mapa de SOBREPOSIÇÃO (camada previsão GeoJSON + pontos de unidades UPA/UBS/UBSI)
++ camada EXTRA: Áreas de risco (SGB) como CONTORNO (sem preenchimento) + hover com atributos
 
 Arquivos esperados no MESMO repo (Render):
 - PNGs na raiz:
@@ -55,12 +55,13 @@ EXTENT = (-90, -30, -60, 15)
 # ----------------- SGB (ÁREAS DE RISCO) ----------------- #
 RISCO_SGB_DEFAULT_NAME = "setor_risco_sgb_leve.geojson"
 
+# contorno (sem preenchimento)
 RISCO_SGB_CORES = {
-    "Alto": "#FFA500",        # laranja
+    "Alto": "#FFD400",        # amarelo forte
     "Muito Alto": "#E53935",  # vermelho
 }
-RISCO_SGB_OPACIDADE = 0.45
-RISCO_SGB_CONTORNO = 0  # 0 = sem contorno (mais leve). Se quiser contorno, põe 1.
+RISCO_SGB_OPACIDADE = 0.0     # <- SEM preenchimento
+RISCO_SGB_CONTORNO = 2        # <- espessura do contorno
 
 # ----------------- VARIÁVEIS DISPONÍVEIS (PREVISÃO PNG) ----------------- #
 VAR_OPCOES = {
@@ -222,18 +223,15 @@ def _norm_txt(s: str) -> str:
     return s
 
 def resolver_arquivo_risco_sgb() -> Path | None:
-    # 1) nome padrão
     p0 = BASE_DIR / RISCO_SGB_DEFAULT_NAME
     if p0.exists():
         return p0
 
-    # 2) tenta encontrar "*risco*sgb*.geojson"
     cands = sorted([p for p in BASE_DIR.glob("*.geojson")
                     if ("risco" in p.name.lower() and "sgb" in p.name.lower())])
     if cands:
         return cands[-1]
 
-    # 3) fallback: qualquer "*risco*.geojson"
     cands2 = sorted([p for p in BASE_DIR.glob("*.geojson") if "risco" in p.name.lower()])
     if cands2:
         return cands2[-1]
@@ -274,11 +272,9 @@ def _pegar_classificacao_risco(props: dict) -> str:
         return "Muito Alto"
     if "alto" in n:
         return "Alto"
-    # se vier vazio/fora do padrão, assume Alto (pra não sumir)
     return "Alto"
 
 def _hover_todas_colunas(props: dict) -> str:
-    # mostra todas as colunas do properties (ignorando vazias)
     linhas = []
     for k in sorted(props.keys(), key=lambda x: str(x).lower()):
         v = props.get(k)
@@ -395,7 +391,6 @@ def construir_mapa_sobreposicao(var_key: str, data_iso: str | None, camada_unida
 
     fig = go.Figure()
 
-    # ✅ REMOVIDO minzoom/maxzoom (Plotly 6+ não aceita no layout.mapbox)
     fig.update_layout(
         mapbox=dict(
             style="open-street-map",
@@ -421,7 +416,6 @@ def construir_mapa_sobreposicao(var_key: str, data_iso: str | None, camada_unida
         uirevision="overlay_lock",
     )
 
-    # âncora invisível pra garantir mapbox sempre
     fig.add_trace(
         go.Scattermapbox(
             lat=[center_lat],
@@ -454,7 +448,6 @@ def construir_mapa_sobreposicao(var_key: str, data_iso: str | None, camada_unida
                         if data_iso else "Camada previsão: (arquivo não encontrado)"
                     )
             else:
-                # tenta Choroplethmapbox “correto”
                 try:
                     for i, ft in enumerate(feats):
                         props = ft.get("properties", {}) or {}
@@ -489,7 +482,6 @@ def construir_mapa_sobreposicao(var_key: str, data_iso: str | None, camada_unida
                         )
                     print("✅ Overlay previsão: Choroplethmapbox OK")
                 except Exception as e_choro:
-                    # fallback estável: mapbox.layers (sem hover)
                     print(f"⚠️ Choroplethmapbox falhou, usando fallback mapbox.layers: {repr(e_choro)}")
                     layers = []
                     for i, ft in enumerate(feats):
@@ -506,7 +498,6 @@ def construir_mapa_sobreposicao(var_key: str, data_iso: str | None, camada_unida
                             "opacity": 0.60,
                         })
 
-                        # legenda “fake” pra listar classes
                         fig.add_trace(
                             go.Scattermapbox(
                                 lat=[center_lat],
@@ -531,7 +522,7 @@ def construir_mapa_sobreposicao(var_key: str, data_iso: str | None, camada_unida
             print(f"❌ ERRO no overlay (previsão): {repr(e)}")
             titulo_prev = "Camada previsão: (erro ao carregar)"
 
-    # --- RISCO SGB (POLÍGONOS COM HOVER) ---
+    # --- RISCO SGB (SÓ CONTORNO + HOVER COMPLETO) ---
     if mostrar_risco_sgb:
         try:
             arq_risco = resolver_arquivo_risco_sgb()
@@ -551,7 +542,6 @@ def construir_mapa_sobreposicao(var_key: str, data_iso: str | None, camada_unida
                     props = ft.get("properties") or {}
                     cls = _pegar_classificacao_risco(props)
 
-                    # id estável por feature (para linkar no Choroplethmapbox)
                     fid = props.get("fid") or props.get("FID") or props.get("id") or props.get("ID") or idx
                     props2 = dict(props)
                     props2["__rid"] = f"risco_{fid}"
@@ -564,7 +554,6 @@ def construir_mapa_sobreposicao(var_key: str, data_iso: str | None, camada_unida
                         cls = "Alto"
                     por_classe[cls].append(ft2)
 
-                # Adiciona dois traces: Muito Alto e Alto
                 for cls in ["Muito Alto", "Alto"]:
                     feats_cls = por_classe.get(cls) or []
                     if not feats_cls:
@@ -583,8 +572,11 @@ def construir_mapa_sobreposicao(var_key: str, data_iso: str | None, camada_unida
                             z=[1] * len(locations),
                             colorscale=[[0, cor], [1, cor]],
                             showscale=False,
-                            marker_opacity=RISCO_SGB_OPACIDADE,
+
+                            marker_opacity=RISCO_SGB_OPACIDADE,   # 0.0 = sem preenchimento
                             marker_line_width=RISCO_SGB_CONTORNO,
+                            marker_line_color=cor,
+
                             name=f"Risco SGB – {cls}",
                             legendgroup="risco_sgb",
                             hovertext=hovertext,
@@ -666,7 +658,7 @@ app.layout = dbc.Container(
             style={"textAlign": "center"},
         ),
         html.Div(
-            "Visualização diária (figuras) + sobreposição (camadas GeoJSON + UPA/UBS/UBSI + Risco SGB).",
+            "Visualização diária (figuras) + sobreposição (camadas GeoJSON + UPA/UBS/UBSI).",
             className="mb-3",
             style={"textAlign": "center"},
         ),
@@ -780,7 +772,7 @@ app.layout = dbc.Container(
 
         html.Hr(),
         html.Footer(
-            "Fonte: ECMWF Open Data – Processamento local (Pedro / Dash) • Unidades: GeoJSON (UPA/UBS/UBSI) • Camadas: GeoJSON por classes • Risco: SGB (GeoJSON)",
+            "Fonte: ECMWF Open Data – Processamento local (Pedro / Dash) • Unidades: GeoJSON (UPA/UBS/UBSI) • Camadas: GeoJSON por classes",
             className="text-muted mt-1 mb-2",
             style={"fontSize": "0.85rem"},
         ),
