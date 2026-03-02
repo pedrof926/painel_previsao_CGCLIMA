@@ -2,6 +2,7 @@
 """
 Painel Dash para visualizar as figuras geradas pelo ECMWF
 + mapa de SOBREPOSIÇÃO (camada previsão GeoJSON + pontos de unidades UPA/UBS/UBSI).
++ camada EXTRA: Áreas de risco SGB (polígonos + hover com atributos)
 
 Arquivos esperados no MESMO repo (Render):
 - PNGs na raiz:
@@ -24,12 +25,17 @@ Arquivos esperados no MESMO repo (Render):
       tmax_YYYY-MM-DD.geojson
       tmed_YYYY-MM-DD.geojson
       prec_acum_YYYY-MM-DD_a_YYYY-MM-DD.geojson
+
+- Áreas de risco SGB (GeoJSON Polygon/MultiPolygon) na raiz:
+    setor_risco_sgb_leve.geojson
 """
 
 from pathlib import Path
 import base64
 import json
 from datetime import datetime
+import unicodedata
+import re
 
 from dash import Dash, html, dcc, Input, Output
 import dash_bootstrap_components as dbc
@@ -45,6 +51,16 @@ CAMADAS_FALLBACK_DIRS = [CAMADAS_DIR, BASE_DIR]  # procura primeiro na pasta, de
 # Recorte padrão (igual às figuras)
 # (lon_min, lon_max, lat_min, lat_max)
 EXTENT = (-90, -30, -60, 15)
+
+# ----------------- SGB (ÁREAS DE RISCO) ----------------- #
+RISCO_SGB_DEFAULT_NAME = "setor_risco_sgb_leve.geojson"
+
+RISCO_SGB_CORES = {
+    "Alto": "#FFA500",        # laranja
+    "Muito Alto": "#E53935",  # vermelho
+}
+RISCO_SGB_OPACIDADE = 0.45
+RISCO_SGB_CONTORNO = 0  # 0 = sem contorno (mais leve). Se quiser contorno, põe 1.
 
 # ----------------- VARIÁVEIS DISPONÍVEIS (PREVISÃO PNG) ----------------- #
 VAR_OPCOES = {
@@ -198,6 +214,79 @@ def resolver_arquivo_geojson_unidades(key: str) -> Path | None:
             return p
     return None
 
+# ----------------- HELPERS (SGB RISCO) ----------------- #
+def _norm_txt(s: str) -> str:
+    s = str(s or "").strip()
+    s = unicodedata.normalize("NFKD", s).encode("ascii", "ignore").decode("ascii")
+    s = re.sub(r"\s+", " ", s).lower()
+    return s
+
+def resolver_arquivo_risco_sgb() -> Path | None:
+    # 1) nome padrão
+    p0 = BASE_DIR / RISCO_SGB_DEFAULT_NAME
+    if p0.exists():
+        return p0
+
+    # 2) tenta encontrar "*risco*sgb*.geojson"
+    cands = sorted([p for p in BASE_DIR.glob("*.geojson")
+                    if ("risco" in p.name.lower() and "sgb" in p.name.lower())])
+    if cands:
+        return cands[-1]
+
+    # 3) fallback: qualquer "*risco*.geojson"
+    cands2 = sorted([p for p in BASE_DIR.glob("*.geojson") if "risco" in p.name.lower()])
+    if cands2:
+        return cands2[-1]
+
+    return None
+
+def carregar_geojson_featurecollection(path_geojson: Path | None) -> dict | None:
+    if (path_geojson is None) or (not path_geojson.exists()):
+        return None
+    try:
+        with open(path_geojson, "r", encoding="utf-8") as f:
+            gj = json.load(f)
+        if gj.get("type") == "FeatureCollection":
+            return gj
+        if gj.get("type") == "Feature":
+            return {"type": "FeatureCollection", "features": [gj]}
+        return None
+    except Exception as e:
+        print(f"❌ ERRO lendo GeoJSON risco SGB: {repr(e)}")
+        return None
+
+def _pegar_classificacao_risco(props: dict) -> str:
+    # tenta várias chaves comuns
+    cand_keys = [
+        "grau_risco", "GRAU_RISCO",
+        "classificacao", "CLASSIFICACAO",
+        "classe", "CLASSE",
+        "risco", "RISCO"
+    ]
+    val = ""
+    for k in cand_keys:
+        if k in props and props.get(k) not in (None, ""):
+            val = props.get(k)
+            break
+
+    n = _norm_txt(val)
+    if "muito" in n:
+        return "Muito Alto"
+    if "alto" in n:
+        return "Alto"
+    # se vier vazio/fora do padrão, assume Alto (pra não sumir)
+    return "Alto"
+
+def _hover_todas_colunas(props: dict) -> str:
+    # mostra todas as colunas do properties (ignorando vazias)
+    linhas = []
+    for k in sorted(props.keys(), key=lambda x: str(x).lower()):
+        v = props.get(k)
+        if v is None or str(v).strip() == "":
+            continue
+        linhas.append(f"<b>{k}</b>: {v}")
+    return "<br>".join(linhas) if linhas else "<b>Área de risco (SGB)</b>"
+
 # ----------------- HELPERS (UNIDADES) ----------------- #
 def carregar_geojson_points(caminho: Path | None, camada: str):
     if (caminho is None) or (not caminho.exists()):
@@ -298,7 +387,8 @@ def carregar_geojson_poligonos_por_classe(path_geojson: Path | None):
 
 # ----------------- MAPA OVERLAY ----------------- #
 def construir_mapa_sobreposicao(var_key: str, data_iso: str | None, camada_unidade: str,
-                               mostrar_previsao: bool, mostrar_unidades: bool) -> go.Figure:
+                               mostrar_previsao: bool, mostrar_unidades: bool,
+                               mostrar_risco_sgb: bool) -> go.Figure:
     lon_min, lon_max, lat_min, lat_max = EXTENT
     center_lat = (lat_min + lat_max) / 2
     center_lon = (lon_min + lon_max) / 2
@@ -345,6 +435,7 @@ def construir_mapa_sobreposicao(var_key: str, data_iso: str | None, camada_unida
     )
 
     titulo_prev = "Camada previsão: (desligada)"
+    titulo_risco = "Risco (SGB): (desligado)"
 
     # --- PREVISÃO (POLÍGONOS) ---
     if mostrar_previsao:
@@ -398,7 +489,7 @@ def construir_mapa_sobreposicao(var_key: str, data_iso: str | None, camada_unida
                         )
                     print("✅ Overlay previsão: Choroplethmapbox OK")
                 except Exception as e_choro:
-                    # fallback estável: mapbox.layers
+                    # fallback estável: mapbox.layers (sem hover)
                     print(f"⚠️ Choroplethmapbox falhou, usando fallback mapbox.layers: {repr(e_choro)}")
                     layers = []
                     for i, ft in enumerate(feats):
@@ -440,6 +531,73 @@ def construir_mapa_sobreposicao(var_key: str, data_iso: str | None, camada_unida
             print(f"❌ ERRO no overlay (previsão): {repr(e)}")
             titulo_prev = "Camada previsão: (erro ao carregar)"
 
+    # --- RISCO SGB (POLÍGONOS COM HOVER) ---
+    if mostrar_risco_sgb:
+        try:
+            arq_risco = resolver_arquivo_risco_sgb()
+            print(f"ℹ️ Overlay: tentando risco SGB -> {arq_risco}")
+
+            gj_risco = carregar_geojson_featurecollection(arq_risco)
+            feats_r = (gj_risco or {}).get("features") or []
+
+            if not feats_r:
+                titulo_risco = "Risco (SGB): (arquivo não encontrado / vazio)"
+            else:
+                por_classe = {"Alto": [], "Muito Alto": []}
+
+                for idx, ft in enumerate(feats_r):
+                    if not isinstance(ft, dict):
+                        continue
+                    props = ft.get("properties") or {}
+                    cls = _pegar_classificacao_risco(props)
+
+                    # id estável por feature (para linkar no Choroplethmapbox)
+                    fid = props.get("fid") or props.get("FID") or props.get("id") or props.get("ID") or idx
+                    props2 = dict(props)
+                    props2["__rid"] = f"risco_{fid}"
+                    props2["__hover"] = _hover_todas_colunas(props2)
+
+                    ft2 = dict(ft)
+                    ft2["properties"] = props2
+
+                    if cls not in por_classe:
+                        cls = "Alto"
+                    por_classe[cls].append(ft2)
+
+                # Adiciona dois traces: Muito Alto e Alto
+                for cls in ["Muito Alto", "Alto"]:
+                    feats_cls = por_classe.get(cls) or []
+                    if not feats_cls:
+                        continue
+
+                    gj_cls = {"type": "FeatureCollection", "features": feats_cls}
+                    locations = [f["properties"]["__rid"] for f in feats_cls]
+                    hovertext = [f["properties"].get("__hover", "") for f in feats_cls]
+                    cor = RISCO_SGB_CORES.get(cls, "#999999")
+
+                    fig.add_trace(
+                        go.Choroplethmapbox(
+                            geojson=gj_cls,
+                            featureidkey="properties.__rid",
+                            locations=locations,
+                            z=[1] * len(locations),
+                            colorscale=[[0, cor], [1, cor]],
+                            showscale=False,
+                            marker_opacity=RISCO_SGB_OPACIDADE,
+                            marker_line_width=RISCO_SGB_CONTORNO,
+                            name=f"Risco SGB – {cls}",
+                            legendgroup="risco_sgb",
+                            hovertext=hovertext,
+                            hovertemplate="%{hovertext}<extra></extra>",
+                            showlegend=True,
+                        )
+                    )
+
+                titulo_risco = "Risco (SGB): ligado"
+        except Exception as e:
+            print(f"❌ ERRO no overlay (risco SGB): {repr(e)}")
+            titulo_risco = "Risco (SGB): (erro ao carregar)"
+
     # --- UNIDADES (PONTOS) ---
     if mostrar_unidades:
         try:
@@ -474,8 +632,11 @@ def construir_mapa_sobreposicao(var_key: str, data_iso: str | None, camada_unida
         except Exception as e:
             print(f"❌ ERRO no overlay (unidades): {repr(e)}")
 
-    titulo = f"Sobreposição – {titulo_prev} + {('Unidades: ' + camada_unidade.upper()) if mostrar_unidades else 'Unidades: (desligadas)'}"
-    datarevision_key = f"{var_key}|{data_iso}|{camada_unidade}|{int(mostrar_previsao)}|{int(mostrar_unidades)}"
+    titulo = (
+        f"Sobreposição – {titulo_prev} • {titulo_risco} + "
+        f"{('Unidades: ' + camada_unidade.upper()) if mostrar_unidades else 'Unidades: (desligadas)'}"
+    )
+    datarevision_key = f"{var_key}|{data_iso}|{camada_unidade}|{int(mostrar_previsao)}|{int(mostrar_unidades)}|{int(mostrar_risco_sgb)}"
 
     fig.update_layout(
         title=dict(text=titulo, x=0.5, xanchor="center"),
@@ -505,7 +666,7 @@ app.layout = dbc.Container(
             style={"textAlign": "center"},
         ),
         html.Div(
-            "Visualização diária (figuras) + sobreposição (camadas GeoJSON + UPA/UBS/UBSI).",
+            "Visualização diária (figuras) + sobreposição (camadas GeoJSON + UPA/UBS/UBSI + Risco SGB).",
             className="mb-3",
             style={"textAlign": "center"},
         ),
@@ -572,14 +733,16 @@ app.layout = dbc.Container(
                             id="check-overlay",
                             options=[
                                 {"label": "Mostrar previsão (GeoJSON)", "value": "prev"},
+                                {"label": "Mostrar áreas de risco (SGB)", "value": "risco"},
                                 {"label": "Mostrar unidades (pontos)", "value": "uni"},
                             ],
-                            value=["prev", "uni"],
+                            value=["prev", "risco", "uni"],
                             labelStyle={"display": "block"},
                             className="mb-2",
                         ),
                         html.Small(
-                            "Previsão usa GeoJSON em /camadas_geojson (ou na raiz).",
+                            "Previsão usa GeoJSON em /camadas_geojson (ou na raiz). "
+                            "Risco SGB procura por 'setor_risco_sgb_leve.geojson' (ou *risco*sgb*.geojson) na raiz.",
                             className="text-muted",
                         ),
                     ],
@@ -617,7 +780,7 @@ app.layout = dbc.Container(
 
         html.Hr(),
         html.Footer(
-            "Fonte: ECMWF Open Data – Processamento local (Pedro / Dash) • Unidades: GeoJSON (UPA/UBS/UBSI) • Camadas: GeoJSON por classes",
+            "Fonte: ECMWF Open Data – Processamento local (Pedro / Dash) • Unidades: GeoJSON (UPA/UBS/UBSI) • Camadas: GeoJSON por classes • Risco: SGB (GeoJSON)",
             className="text-muted mt-1 mb-2",
             style={"fontSize": "0.85rem"},
         ),
@@ -662,6 +825,7 @@ def atualizar_mapa_previsao(data_iso, var_key, modo):
 def atualizar_overlay(data_iso, var_key, camada_unidade, check_values):
     check_values = check_values or []
     mostrar_previsao = "prev" in check_values
+    mostrar_risco_sgb = "risco" in check_values
     mostrar_unidades = "uni" in check_values
 
     return construir_mapa_sobreposicao(
@@ -670,6 +834,7 @@ def atualizar_overlay(data_iso, var_key, camada_unidade, check_values):
         camada_unidade=camada_unidade or "upa",
         mostrar_previsao=mostrar_previsao,
         mostrar_unidades=mostrar_unidades,
+        mostrar_risco_sgb=mostrar_risco_sgb,
     )
 
 if __name__ == "__main__":
