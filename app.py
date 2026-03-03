@@ -698,6 +698,7 @@ def construir_mapa_sobreposicao(var_key: str, data_iso: str | None, camada_unida
     fig.update_layout(
         title=dict(text=titulo, x=0.5, xanchor="center"),
         datarevision=datarevision_key,
+        uirevision=datarevision_key,
     )
     return fig
 
