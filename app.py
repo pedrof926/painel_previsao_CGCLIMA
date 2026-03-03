@@ -622,7 +622,7 @@ def construir_mapa_sobreposicao(var_key: str, data_iso: str | None, camada_unida
                 center_lat=center_lat,
                 center_lon=center_lon,
                 line_width=2,
-                show_colorbar=True
+                show_colorbar=False
             )
         except Exception as e:
             print(f"❌ ERRO no overlay (SGB): {repr(e)}")
