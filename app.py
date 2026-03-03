@@ -1,7 +1,8 @@
 # -*- coding: utf-8 -*-
 """
 Painel Dash para visualizar as figuras geradas pelo ECMWF
-+ mapa de SOBREPOSIÇÃO (camada previsão GeoJSON + pontos de unidades UPA/UBS/UBSI).
++ mapa de SOBREPOSIÇÃO (camada previsão GeoJSON + pontos de unidades UPA/UBS/UBSI)
++ camada SGB (Setores de Risco) como POLÍGONOS ORIGINAIS sem preenchimento (apenas contorno).
 
 Arquivos esperados no MESMO repo (Render):
 - PNGs na raiz:
@@ -24,6 +25,9 @@ Arquivos esperados no MESMO repo (Render):
       tmax_YYYY-MM-DD.geojson
       tmed_YYYY-MM-DD.geojson
       prec_acum_YYYY-MM-DD_a_YYYY-MM-DD.geojson
+
+- Setores de risco SGB (Polygon/MultiPolygon) na raiz:
+    setor_risco_sgb_leve.geojson  (ou nome parecido; o app resolve por "setor_risco" e "sgb")
 """
 
 from pathlib import Path
@@ -198,6 +202,173 @@ def resolver_arquivo_geojson_unidades(key: str) -> Path | None:
             return p
     return None
 
+# ----------------- HELPERS (SGB: SETORES DE RISCO) ----------------- #
+def resolver_arquivo_geojson_sgb() -> Path | None:
+    """
+    Procura um geojson de setores de risco na raiz.
+    Prioriza nomes que contenham 'setor_risco' e 'sgb' (case-insensitive).
+    """
+    cands = list(BASE_DIR.glob("*.geojson"))
+    if not cands:
+        return None
+
+    def score(p: Path) -> int:
+        name = p.name.lower()
+        s = 0
+        if "setor" in name:
+            s += 2
+        if "setor_risco" in name or "setores_risco" in name:
+            s += 4
+        if "risco" in name:
+            s += 2
+        if "sgb" in name or "cprm" in name:
+            s += 3
+        if "leve" in name:
+            s += 1
+        return s
+
+    cands_sorted = sorted(cands, key=score)
+    best = cands_sorted[-1]
+    return best if score(best) > 0 else None
+
+def _polygon_to_lines(coords):
+    """
+    coords: lista de anéis (ring). Cada ring é lista [ [lon,lat], [lon,lat], ... ]
+    Retorna (lons, lats) com None separando segmentos para Scattermapbox.
+    """
+    lons, lats = [], []
+    for ring in coords:
+        for lon, lat in ring:
+            lons.append(lon)
+            lats.append(lat)
+        lons.append(None)
+        lats.append(None)
+    return lons, lats
+
+def _norm_risco(x: str) -> str:
+    s = (x or "").strip().lower()
+    # normaliza variações comuns
+    s = s.replace("muito alto", "muito alto").replace("muito alta", "muito alto")
+    s = s.replace("medio", "médio")
+    s = s.replace("muito alto", "muito alto")
+    # mantém os rótulos finais:
+    if "muito" in s and "alto" in s:
+        return "Muito alto"
+    if "alto" in s:
+        return "Alto"
+    if "médio" in s or "medio" in s:
+        return "Médio"
+    if "baixo" in s:
+        return "Baixo"
+    return (x or "").strip() or "Sem classe"
+
+def add_sgb_risk_layer(fig: go.Figure, geojson_path: Path | None, center_lat: float, center_lon: float,
+                       line_width: int = 2, show_colorbar: bool = True) -> None:
+    """
+    Adiciona ao fig:
+    - polígonos SGB como contorno (sem preenchimento), cor por grau_risco
+    - uma colorbar (barra) representando as classes
+    """
+    if (geojson_path is None) or (not geojson_path.exists()):
+        print("⚠️ GeoJSON SGB não encontrado na raiz (camada SGB desligada/ausente).")
+        return
+
+    with open(geojson_path, "r", encoding="utf-8") as f:
+        gj = json.load(f)
+
+    feats = gj.get("features", []) or []
+    print(f"ℹ️ SGB: arquivo={geojson_path.name} | features={len(feats)}")
+
+    # ordem e cores (fixas)
+    ordem = ["Baixo", "Médio", "Alto", "Muito alto"]
+    cores = {
+        "Baixo": "#2ECC71",
+        "Médio": "#F1C40F",
+        "Alto": "#E67E22",
+        "Muito alto": "#E74C3C",
+        "Sem classe": "#7F8C8D",
+    }
+
+    # acumular linhas por classe
+    linhas = {k: ([], []) for k in ordem + ["Sem classe"]}
+
+    for ft in feats:
+        geom = ft.get("geometry", None)
+        if not geom:
+            continue  # ignora geometry null
+
+        props = ft.get("properties", {}) or {}
+        risco_raw = props.get("grau_risco", props.get("GRAU_RISCO", None))
+        risco = _norm_risco(str(risco_raw)) if risco_raw is not None else "Sem classe"
+
+        gtype = (geom.get("type") or "").strip()
+        coords = geom.get("coordinates", [])
+
+        if gtype == "Polygon":
+            lons, lats = _polygon_to_lines(coords)
+            linhas.setdefault(risco, ([], []))
+            linhas[risco][0].extend(lons)
+            linhas[risco][1].extend(lats)
+
+        elif gtype == "MultiPolygon":
+            linhas.setdefault(risco, ([], []))
+            for poly in coords:
+                lons, lats = _polygon_to_lines(poly)
+                linhas[risco][0].extend(lons)
+                linhas[risco][1].extend(lats)
+
+    # adiciona uma trace de linhas por classe (só contorno)
+    for risco in ordem + ["Sem classe"]:
+        if risco not in linhas:
+            continue
+        lons, lats = linhas[risco]
+        if not lons:
+            continue
+
+        fig.add_trace(
+            go.Scattermapbox(
+                lon=lons,
+                lat=lats,
+                mode="lines",
+                line=dict(width=line_width, color=cores.get(risco, "#7F8C8D")),
+                name=f"SGB – {risco}",
+                legendgroup="sgb",
+                hoverinfo="skip",
+                showlegend=True,
+            )
+        )
+
+    # colorbar "helper" invisível (para aparecer a barra sem preencher polígonos)
+    if show_colorbar:
+        z_vals = list(range(len(ordem)))
+        if z_vals:
+            colorscale = [(i / (len(ordem) - 1), cores[rot]) for i, rot in enumerate(ordem)] if len(ordem) > 1 else [(0, cores[ordem[0]]), (1, cores[ordem[0]])]
+
+            fig.add_trace(
+                go.Scattermapbox(
+                    lon=[center_lon + 0.01 * i for i in z_vals],
+                    lat=[center_lat + 0.01 * i for i in z_vals],
+                    mode="markers",
+                    marker=dict(
+                        size=0.1,
+                        opacity=0,  # invisível
+                        color=z_vals,
+                        colorscale=colorscale,
+                        cmin=0,
+                        cmax=max(z_vals),
+                        colorbar=dict(
+                            title="Grau de risco (SGB)",
+                            tickmode="array",
+                            tickvals=z_vals,
+                            ticktext=ordem,
+                        ),
+                    ),
+                    showlegend=False,
+                    hoverinfo="skip",
+                    name="SGB colorbar helper",
+                )
+            )
+
 # ----------------- HELPERS (UNIDADES) ----------------- #
 def carregar_geojson_points(caminho: Path | None, camada: str):
     if (caminho is None) or (not caminho.exists()):
@@ -298,7 +469,7 @@ def carregar_geojson_poligonos_por_classe(path_geojson: Path | None):
 
 # ----------------- MAPA OVERLAY ----------------- #
 def construir_mapa_sobreposicao(var_key: str, data_iso: str | None, camada_unidade: str,
-                               mostrar_previsao: bool, mostrar_unidades: bool) -> go.Figure:
+                               mostrar_previsao: bool, mostrar_unidades: bool, mostrar_sgb: bool) -> go.Figure:
     lon_min, lon_max, lat_min, lat_max = EXTENT
     center_lat = (lat_min + lat_max) / 2
     center_lon = (lon_min + lon_max) / 2
@@ -440,6 +611,22 @@ def construir_mapa_sobreposicao(var_key: str, data_iso: str | None, camada_unida
             print(f"❌ ERRO no overlay (previsão): {repr(e)}")
             titulo_prev = "Camada previsão: (erro ao carregar)"
 
+    # --- SGB (SETOR DE RISCO) — POLÍGONOS ORIGINAIS, SÓ CONTORNO ---
+    if mostrar_sgb:
+        try:
+            arq_sgb = resolver_arquivo_geojson_sgb()
+            print(f"ℹ️ Overlay: tentando SGB -> {arq_sgb}")
+            add_sgb_risk_layer(
+                fig=fig,
+                geojson_path=arq_sgb,
+                center_lat=center_lat,
+                center_lon=center_lon,
+                line_width=2,
+                show_colorbar=True
+            )
+        except Exception as e:
+            print(f"❌ ERRO no overlay (SGB): {repr(e)}")
+
     # --- UNIDADES (PONTOS) ---
     if mostrar_unidades:
         try:
@@ -474,8 +661,12 @@ def construir_mapa_sobreposicao(var_key: str, data_iso: str | None, camada_unida
         except Exception as e:
             print(f"❌ ERRO no overlay (unidades): {repr(e)}")
 
-    titulo = f"Sobreposição – {titulo_prev} + {('Unidades: ' + camada_unidade.upper()) if mostrar_unidades else 'Unidades: (desligadas)'}"
-    datarevision_key = f"{var_key}|{data_iso}|{camada_unidade}|{int(mostrar_previsao)}|{int(mostrar_unidades)}"
+    titulo = (
+        f"Sobreposição – {titulo_prev}"
+        f" + {('SGB: (ligado)' if mostrar_sgb else 'SGB: (desligado)')}"
+        f" + {('Unidades: ' + camada_unidade.upper()) if mostrar_unidades else 'Unidades: (desligadas)'}"
+    )
+    datarevision_key = f"{var_key}|{data_iso}|{camada_unidade}|{int(mostrar_previsao)}|{int(mostrar_unidades)}|{int(mostrar_sgb)}"
 
     fig.update_layout(
         title=dict(text=titulo, x=0.5, xanchor="center"),
@@ -505,7 +696,7 @@ app.layout = dbc.Container(
             style={"textAlign": "center"},
         ),
         html.Div(
-            "Visualização diária (figuras) + sobreposição (camadas GeoJSON + UPA/UBS/UBSI).",
+            "Visualização diária (figuras) + sobreposição (camadas GeoJSON + UPA/UBS/UBSI + Setores de Risco SGB).",
             className="mb-3",
             style={"textAlign": "center"},
         ),
@@ -573,13 +764,14 @@ app.layout = dbc.Container(
                             options=[
                                 {"label": "Mostrar previsão (GeoJSON)", "value": "prev"},
                                 {"label": "Mostrar unidades (pontos)", "value": "uni"},
+                                {"label": "Mostrar Setores de Risco (SGB)", "value": "sgb"},
                             ],
-                            value=["prev", "uni"],
+                            value=["prev", "uni", "sgb"],
                             labelStyle={"display": "block"},
                             className="mb-2",
                         ),
                         html.Small(
-                            "Previsão usa GeoJSON em /camadas_geojson (ou na raiz).",
+                            "Previsão usa GeoJSON em /camadas_geojson (ou na raiz). Setores SGB: geojson na raiz.",
                             className="text-muted",
                         ),
                     ],
@@ -617,7 +809,7 @@ app.layout = dbc.Container(
 
         html.Hr(),
         html.Footer(
-            "Fonte: ECMWF Open Data – Processamento local (Pedro / Dash) • Unidades: GeoJSON (UPA/UBS/UBSI) • Camadas: GeoJSON por classes",
+            "Fonte: ECMWF Open Data – Processamento local (Pedro / Dash) • Unidades: GeoJSON (UPA/UBS/UBSI) • Camadas: GeoJSON por classes • SGB: Setores de Risco (polígonos)",
             className="text-muted mt-1 mb-2",
             style={"fontSize": "0.85rem"},
         ),
@@ -663,6 +855,7 @@ def atualizar_overlay(data_iso, var_key, camada_unidade, check_values):
     check_values = check_values or []
     mostrar_previsao = "prev" in check_values
     mostrar_unidades = "uni" in check_values
+    mostrar_sgb = "sgb" in check_values
 
     return construir_mapa_sobreposicao(
         var_key=var_key,
@@ -670,6 +863,7 @@ def atualizar_overlay(data_iso, var_key, camada_unidade, check_values):
         camada_unidade=camada_unidade or "upa",
         mostrar_previsao=mostrar_previsao,
         mostrar_unidades=mostrar_unidades,
+        mostrar_sgb=mostrar_sgb,
     )
 
 if __name__ == "__main__":
