@@ -247,11 +247,7 @@ def _polygon_to_lines(coords):
 
 def _norm_risco(x: str) -> str:
     s = (x or "").strip().lower()
-    # normaliza variações comuns
-    s = s.replace("muito alto", "muito alto").replace("muito alta", "muito alto")
     s = s.replace("medio", "médio")
-    s = s.replace("muito alto", "muito alto")
-    # mantém os rótulos finais:
     if "muito" in s and "alto" in s:
         return "Muito alto"
     if "alto" in s:
@@ -268,7 +264,7 @@ def add_sgb_risk_layer(fig: go.Figure, geojson_path: Path | None, center_lat: fl
     Adiciona ao fig:
     - polígonos SGB como contorno (sem preenchimento), cor por grau_risco
     - (opcional) colorbar helper
-    - ✅ agora com hover mostrando as propriedades do GeoJSON do SGB
+    - hover mostrando apenas as propriedades presentes no GeoJSON do SGB
     """
     if (geojson_path is None) or (not geojson_path.exists()):
         print("⚠️ GeoJSON SGB não encontrado na raiz (camada SGB desligada/ausente).")
@@ -280,7 +276,6 @@ def add_sgb_risk_layer(fig: go.Figure, geojson_path: Path | None, center_lat: fl
     feats = gj.get("features", []) or []
     print(f"ℹ️ SGB: arquivo={geojson_path.name} | features={len(feats)}")
 
-    # ordem e cores (fixas)
     ordem = ["Baixo", "Médio", "Alto", "Muito alto"]
     cores = {
         "Baixo": "#2ECC71",
@@ -290,11 +285,9 @@ def add_sgb_risk_layer(fig: go.Figure, geojson_path: Path | None, center_lat: fl
         "Sem classe": "#7F8C8D",
     }
 
-    # ✅ acumular linhas + hovertext por classe
     linhas = {k: {"lon": [], "lat": [], "text": []} for k in ordem + ["Sem classe"]}
 
     def _props_to_hover(props: dict) -> str:
-        # mostra tudo que vier no properties (sem inventar campo)
         if not props:
             return "<b>SGB</b><br>Sem propriedades"
         parts = []
@@ -308,7 +301,6 @@ def add_sgb_risk_layer(fig: go.Figure, geojson_path: Path | None, center_lat: fl
         return "<b>SGB</b><br>" + "<br>".join(parts)
 
     def _append_with_hover(target_key: str, lons: list, lats: list, hover_str: str):
-        # cria lista de text alinhada ("" nos separadores None)
         texts = [hover_str if (x is not None) else "" for x in lons]
         linhas[target_key]["lon"].extend(lons)
         linhas[target_key]["lat"].extend(lats)
@@ -317,12 +309,11 @@ def add_sgb_risk_layer(fig: go.Figure, geojson_path: Path | None, center_lat: fl
     for ft in feats:
         geom = ft.get("geometry", None)
         if not geom:
-            continue  # ignora geometry null
+            continue
 
         props = ft.get("properties", {}) or {}
         risco_raw = props.get("grau_risco", props.get("GRAU_RISCO", None))
         risco = _norm_risco(str(risco_raw)) if risco_raw is not None else "Sem classe"
-
         hover_str = _props_to_hover(props)
 
         gtype = (geom.get("type") or "").strip()
@@ -341,7 +332,6 @@ def add_sgb_risk_layer(fig: go.Figure, geojson_path: Path | None, center_lat: fl
                 lons, lats = _polygon_to_lines(poly)
                 _append_with_hover(risco, lons, lats, hover_str)
 
-    # adiciona uma trace de linhas por classe (só contorno) + ✅ hover com properties
     for risco in ordem + ["Sem classe"]:
         if risco not in linhas:
             continue
@@ -365,11 +355,13 @@ def add_sgb_risk_layer(fig: go.Figure, geojson_path: Path | None, center_lat: fl
             )
         )
 
-    # colorbar helper (mantém igual; você já está chamando show_colorbar=False no overlay)
     if show_colorbar:
         z_vals = list(range(len(ordem)))
         if z_vals:
-            colorscale = [(i / (len(ordem) - 1), cores[rot]) for i, rot in enumerate(ordem)] if len(ordem) > 1 else [(0, cores[ordem[0]]), (1, cores[ordem[0]])]
+            colorscale = (
+                [(i / (len(ordem) - 1), cores[rot]) for i, rot in enumerate(ordem)]
+                if len(ordem) > 1 else [(0, cores[ordem[0]]), (1, cores[ordem[0]])]
+            )
 
             fig.add_trace(
                 go.Scattermapbox(
@@ -378,7 +370,7 @@ def add_sgb_risk_layer(fig: go.Figure, geojson_path: Path | None, center_lat: fl
                     mode="markers",
                     marker=dict(
                         size=0.1,
-                        opacity=0,  # invisível
+                        opacity=0,
                         color=z_vals,
                         colorscale=colorscale,
                         cmin=0,
@@ -417,7 +409,6 @@ def carregar_geojson_points(caminho: Path | None, camada: str):
     for ft in feats:
         geom = ft.get("geometry", {}) or {}
         props = ft.get("properties", {}) or {}
-
         gtype = (geom.get("type") or "").strip().lower()
 
         nome = (
@@ -503,7 +494,8 @@ def construir_mapa_sobreposicao(var_key: str, data_iso: str | None, camada_unida
 
     fig = go.Figure()
 
-    # ✅ REMOVIDO minzoom/maxzoom (Plotly 6+ não aceita no layout.mapbox)
+    # ✅ uirevision fixo (preserva zoom/pan)
+    # ✅ datarevision variável (força atualizar camadas/traces quando mudar data/var)
     fig.update_layout(
         mapbox=dict(
             style="open-street-map",
@@ -529,7 +521,6 @@ def construir_mapa_sobreposicao(var_key: str, data_iso: str | None, camada_unida
         uirevision="overlay_lock",
     )
 
-    # âncora invisível pra garantir mapbox sempre
     fig.add_trace(
         go.Scattermapbox(
             lat=[center_lat],
@@ -561,7 +552,6 @@ def construir_mapa_sobreposicao(var_key: str, data_iso: str | None, camada_unida
                         if data_iso else "Camada previsão: (arquivo não encontrado)"
                     )
             else:
-                # tenta Choroplethmapbox “correto”
                 try:
                     for i, ft in enumerate(feats):
                         props = ft.get("properties", {}) or {}
@@ -596,7 +586,6 @@ def construir_mapa_sobreposicao(var_key: str, data_iso: str | None, camada_unida
                         )
                     print("✅ Overlay previsão: Choroplethmapbox OK")
                 except Exception as e_choro:
-                    # fallback estável: mapbox.layers
                     print(f"⚠️ Choroplethmapbox falhou, usando fallback mapbox.layers: {repr(e_choro)}")
                     layers = []
                     for i, ft in enumerate(feats):
@@ -613,7 +602,6 @@ def construir_mapa_sobreposicao(var_key: str, data_iso: str | None, camada_unida
                             "opacity": 0.60,
                         })
 
-                        # legenda “fake” pra listar classes
                         fig.add_trace(
                             go.Scattermapbox(
                                 lat=[center_lat],
@@ -693,12 +681,13 @@ def construir_mapa_sobreposicao(var_key: str, data_iso: str | None, camada_unida
         f" + {('SGB: (ligado)' if mostrar_sgb else 'SGB: (desligado)')}"
         f" + {('Unidades: ' + camada_unidade.upper()) if mostrar_unidades else 'Unidades: (desligadas)'}"
     )
+
+    # ✅ chave que muda quando muda data/var/camada/checks → força atualizar de verdade
     datarevision_key = f"{var_key}|{data_iso}|{camada_unidade}|{int(mostrar_previsao)}|{int(mostrar_unidades)}|{int(mostrar_sgb)}"
 
     fig.update_layout(
         title=dict(text=titulo, x=0.5, xanchor="center"),
-        datarevision=datarevision_key,
-        uirevision=datarevision_key,
+        datarevision=datarevision_key,  # ✅ NÃO colocar uirevision variável aqui
     )
     return fig
 
