@@ -622,7 +622,7 @@ def construir_mapa_sobreposicao(var_key: str, data_iso: str | None, camada_unida
                 center_lat=center_lat,
                 center_lon=center_lon,
                 line_width=2,
-                show_colorbar=True
+                show_colorbar=False
             )
         except Exception as e:
             print(f"❌ ERRO no overlay (SGB): {repr(e)}")
@@ -868,6 +868,7 @@ def atualizar_overlay(data_iso, var_key, camada_unidade, check_values):
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=8050, debug=True)
+
 
 
 
