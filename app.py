@@ -267,7 +267,6 @@ def add_sgb_risk_layer(fig: go.Figure, geojson_path: Path | None, center_lat: fl
     """
     Adiciona ao fig:
     - polígonos SGB como contorno (sem preenchimento), cor por grau_risco
-    - uma colorbar (barra) representando as classes
     """
     if (geojson_path is None) or (not geojson_path.exists()):
         print("⚠️ GeoJSON SGB não encontrado na raiz (camada SGB desligada/ausente).")
@@ -338,36 +337,108 @@ def add_sgb_risk_layer(fig: go.Figure, geojson_path: Path | None, center_lat: fl
             )
         )
 
-    # colorbar "helper" invisível (para aparecer a barra sem preencher polígonos)
-    if show_colorbar:
-        z_vals = list(range(len(ordem)))
-        if z_vals:
-            colorscale = [(i / (len(ordem) - 1), cores[rot]) for i, rot in enumerate(ordem)] if len(ordem) > 1 else [(0, cores[ordem[0]]), (1, cores[ordem[0]])]
+    # (REMOVIDO) helper de colorbar — solicitado para não exibir escala
 
-            fig.add_trace(
-                go.Scattermapbox(
-                    lon=[center_lon + 0.01 * i for i in z_vals],
-                    lat=[center_lat + 0.01 * i for i in z_vals],
-                    mode="markers",
-                    marker=dict(
-                        size=0.1,
-                        opacity=0,  # invisível
-                        color=z_vals,
-                        colorscale=colorscale,
-                        cmin=0,
-                        cmax=max(z_vals),
-                        colorbar=dict(
-                            title="Grau de risco (SGB)",
-                            tickmode="array",
-                            tickvals=z_vals,
-                            ticktext=ordem,
-                        ),
-                    ),
-                    showlegend=False,
-                    hoverinfo="skip",
-                    name="SGB colorbar helper",
-                )
-            )
+def add_sgb_hover_trace(fig: go.Figure, geojson_path: Path | None) -> None:
+    """
+    Adiciona uma camada invisível (Choroplethmapbox) apenas para hover dos polígonos SGB,
+    exibindo atributos do setor de risco.
+    """
+    if (geojson_path is None) or (not geojson_path.exists()):
+        return
+
+    with open(geojson_path, "r", encoding="utf-8") as f:
+        gj = json.load(f)
+
+    feats = gj.get("features", []) or []
+
+    feats_ok = []
+    locations = []
+    customdata = []
+
+    for i, ft in enumerate(feats):
+        geom = ft.get("geometry", None)
+        if not geom:
+            continue
+
+        props = ft.get("properties", {}) or {}
+
+        fid = props.get("fid", i)
+        pid = f"sgb_{fid}_{i}"
+
+        props2 = dict(props)
+        props2["id"] = pid
+
+        ft2 = dict(ft)
+        ft2["properties"] = props2
+
+        feats_ok.append(ft2)
+        locations.append(pid)
+
+        customdata.append([
+            props.get("uf", ""),
+            props.get("munic", ""),
+            props.get("cd_geocmu", ""),
+            props.get("num_setor", ""),
+            props.get("data_setor", ""),
+            props.get("local", ""),
+            props.get("grau_risco", ""),
+            props.get("grau_vulne", ""),
+            props.get("tipolo_g1", ""),
+            props.get("tipolo_g2", ""),
+            props.get("tipolo_g3", ""),
+            props.get("tipolo_g4", ""),
+            props.get("tipolo_g5", ""),
+            props.get("num_edif", ""),
+            props.get("num_domi", ""),
+            props.get("num_pess", ""),
+            props.get("orgao_exec", ""),
+        ])
+
+    if not feats_ok:
+        return
+
+    gj2 = {"type": "FeatureCollection", "features": feats_ok}
+    z = [1] * len(locations)
+
+    fig.add_trace(
+        go.Choroplethmapbox(
+            geojson=gj2,
+            featureidkey="properties.id",
+            locations=locations,
+            z=z,
+            colorscale=[[0, "rgba(0,0,0,0)"], [1, "rgba(0,0,0,0)"]],
+            showscale=False,
+            marker_opacity=0.0,
+            marker_line_width=0,
+            marker_line_color="rgba(0,0,0,0)",
+            showlegend=False,
+            customdata=customdata,
+            hovertemplate=(
+                "<b>Setor de risco (SGB)</b><br>"
+                "UF: %{customdata[0]}<br>"
+                "Município: %{customdata[1]}<br>"
+                "CD IBGE: %{customdata[2]}<br>"
+                "Setor: %{customdata[3]}<br>"
+                "Data: %{customdata[4]}<br>"
+                "Local: %{customdata[5]}<br><br>"
+                "<b>Grau de risco:</b> %{customdata[6]}<br>"
+                "<b>Grau de vulnerabilidade:</b> %{customdata[7]}<br><br>"
+                "<b>Tipologias</b><br>"
+                "G1: %{customdata[8]}<br>"
+                "G2: %{customdata[9]}<br>"
+                "G3: %{customdata[10]}<br>"
+                "G4: %{customdata[11]}<br>"
+                "G5: %{customdata[12]}<br><br>"
+                "Edificações: %{customdata[13]}<br>"
+                "Domicílios: %{customdata[14]}<br>"
+                "Pessoas: %{customdata[15]}<br>"
+                "Órgão: %{customdata[16]}"
+                "<extra></extra>"
+            ),
+            name="_sgb_hover"
+        )
+    )
 
 # ----------------- HELPERS (UNIDADES) ----------------- #
 def carregar_geojson_points(caminho: Path | None, camada: str):
@@ -611,18 +682,23 @@ def construir_mapa_sobreposicao(var_key: str, data_iso: str | None, camada_unida
             print(f"❌ ERRO no overlay (previsão): {repr(e)}")
             titulo_prev = "Camada previsão: (erro ao carregar)"
 
-    # --- SGB (SETOR DE RISCO) — POLÍGONOS ORIGINAIS, SÓ CONTORNO ---
+    # --- SGB (SETOR DE RISCO) — POLÍGONOS ORIGINAIS, SÓ CONTORNO + HOVER ---
     if mostrar_sgb:
         try:
             arq_sgb = resolver_arquivo_geojson_sgb()
             print(f"ℹ️ Overlay: tentando SGB -> {arq_sgb}")
+
+            # Hover (invisível) com atributos completos
+            add_sgb_hover_trace(fig, arq_sgb)
+
+            # Contorno colorido por classe (sem escala)
             add_sgb_risk_layer(
                 fig=fig,
                 geojson_path=arq_sgb,
                 center_lat=center_lat,
                 center_lon=center_lon,
                 line_width=2,
-                show_colorbar=True
+                show_colorbar=False
             )
         except Exception as e:
             print(f"❌ ERRO no overlay (SGB): {repr(e)}")
