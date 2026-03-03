@@ -247,11 +247,8 @@ def _polygon_to_lines(coords):
 
 def _norm_risco(x: str) -> str:
     s = (x or "").strip().lower()
-    # normaliza variações comuns
     s = s.replace("muito alto", "muito alto").replace("muito alta", "muito alto")
     s = s.replace("medio", "médio")
-    s = s.replace("muito alto", "muito alto")
-    # mantém os rótulos finais:
     if "muito" in s and "alto" in s:
         return "Muito alto"
     if "alto" in s:
@@ -267,6 +264,7 @@ def add_sgb_risk_layer(fig: go.Figure, geojson_path: Path | None, center_lat: fl
     """
     Adiciona ao fig:
     - polígonos SGB como contorno (sem preenchimento), cor por grau_risco
+    - (opcional) colorbar helper invisível
     """
     if (geojson_path is None) or (not geojson_path.exists()):
         print("⚠️ GeoJSON SGB não encontrado na raiz (camada SGB desligada/ausente).")
@@ -278,7 +276,6 @@ def add_sgb_risk_layer(fig: go.Figure, geojson_path: Path | None, center_lat: fl
     feats = gj.get("features", []) or []
     print(f"ℹ️ SGB: arquivo={geojson_path.name} | features={len(feats)}")
 
-    # ordem e cores (fixas)
     ordem = ["Baixo", "Médio", "Alto", "Muito alto"]
     cores = {
         "Baixo": "#2ECC71",
@@ -288,13 +285,12 @@ def add_sgb_risk_layer(fig: go.Figure, geojson_path: Path | None, center_lat: fl
         "Sem classe": "#7F8C8D",
     }
 
-    # acumular linhas por classe
     linhas = {k: ([], []) for k in ordem + ["Sem classe"]}
 
     for ft in feats:
         geom = ft.get("geometry", None)
         if not geom:
-            continue  # ignora geometry null
+            continue
 
         props = ft.get("properties", {}) or {}
         risco_raw = props.get("grau_risco", props.get("GRAU_RISCO", None))
@@ -316,7 +312,6 @@ def add_sgb_risk_layer(fig: go.Figure, geojson_path: Path | None, center_lat: fl
                 linhas[risco][0].extend(lons)
                 linhas[risco][1].extend(lats)
 
-    # adiciona uma trace de linhas por classe (só contorno)
     for risco in ordem + ["Sem classe"]:
         if risco not in linhas:
             continue
@@ -332,17 +327,44 @@ def add_sgb_risk_layer(fig: go.Figure, geojson_path: Path | None, center_lat: fl
                 line=dict(width=line_width, color=cores.get(risco, "#7F8C8D")),
                 name=f"SGB – {risco}",
                 legendgroup="sgb",
-                hoverinfo="skip",
+                hoverinfo="skip",   # hover vai vir da camada invisível abaixo
                 showlegend=True,
             )
         )
 
-    # (REMOVIDO) helper de colorbar — solicitado para não exibir escala
+    # === COLORBAR (removível) ===
+    if show_colorbar:
+        z_vals = list(range(len(ordem)))
+        if z_vals:
+            colorscale = [(i / (len(ordem) - 1), cores[rot]) for i, rot in enumerate(ordem)] if len(ordem) > 1 else [(0, cores[ordem[0]]), (1, cores[ordem[0]])]
+            fig.add_trace(
+                go.Scattermapbox(
+                    lon=[center_lon + 0.01 * i for i in z_vals],
+                    lat=[center_lat + 0.01 * i for i in z_vals],
+                    mode="markers",
+                    marker=dict(
+                        size=0.1,
+                        opacity=0,
+                        color=z_vals,
+                        colorscale=colorscale,
+                        cmin=0,
+                        cmax=max(z_vals),
+                        colorbar=dict(
+                            title="Grau de risco (SGB)",
+                            tickmode="array",
+                            tickvals=z_vals,
+                            ticktext=ordem,
+                        ),
+                    ),
+                    showlegend=False,
+                    hoverinfo="skip",
+                    name="SGB colorbar helper",
+                )
+            )
 
-def add_sgb_hover_trace(fig: go.Figure, geojson_path: Path | None) -> None:
+def add_sgb_hover_layer(fig: go.Figure, geojson_path: Path | None) -> None:
     """
-    Adiciona uma camada invisível (Choroplethmapbox) apenas para hover dos polígonos SGB,
-    exibindo atributos do setor de risco.
+    Camada invisível apenas para HOVER do SGB (não preenche, não cria escala).
     """
     if (geojson_path is None) or (not geojson_path.exists()):
         return
@@ -351,89 +373,81 @@ def add_sgb_hover_trace(fig: go.Figure, geojson_path: Path | None) -> None:
         gj = json.load(f)
 
     feats = gj.get("features", []) or []
+    if not feats:
+        return
 
-    feats_ok = []
-    locations = []
-    customdata = []
+    feats2 = []
+    locs = []
+    custom = []
 
     for i, ft in enumerate(feats):
         geom = ft.get("geometry", None)
         if not geom:
             continue
-
         props = ft.get("properties", {}) or {}
 
-        fid = props.get("fid", i)
-        pid = f"sgb_{fid}_{i}"
-
+        # id único por feature
+        pid = f"sgb_{i}"
         props2 = dict(props)
         props2["id"] = pid
 
         ft2 = dict(ft)
         ft2["properties"] = props2
 
-        feats_ok.append(ft2)
-        locations.append(pid)
+        feats2.append(ft2)
+        locs.append(pid)
 
-        customdata.append([
-            props.get("uf", ""),
-            props.get("munic", ""),
-            props.get("cd_geocmu", ""),
-            props.get("num_setor", ""),
-            props.get("data_setor", ""),
-            props.get("local", ""),
-            props.get("grau_risco", ""),
-            props.get("grau_vulne", ""),
-            props.get("tipolo_g1", ""),
-            props.get("tipolo_g2", ""),
-            props.get("tipolo_g3", ""),
-            props.get("tipolo_g4", ""),
-            props.get("tipolo_g5", ""),
-            props.get("num_edif", ""),
-            props.get("num_domi", ""),
-            props.get("num_pess", ""),
-            props.get("orgao_exec", ""),
+        # pega os campos mais úteis (se não existir, fica vazio)
+        custom.append([
+            props.get("munic", props.get("MUNIC", props.get("municipio", ""))),
+            props.get("uf", props.get("UF", "")),
+            props.get("grau_risco", props.get("GRAU_RISCO", "")),
+            props.get("grau_vulne", props.get("GRAU_VULNE", "")),
+            props.get("tipolo_g1", props.get("TIPOLO_G1", "")),
+            props.get("tipolo_g2", props.get("TIPOLO_G2", "")),
+            props.get("tipolo_g3", props.get("TIPOLO_G3", "")),
+            props.get("tipolo_g4", props.get("TIPOLO_G4", "")),
+            props.get("tipolo_g5", props.get("TIPOLO_G5", "")),
+            props.get("local", props.get("LOCAL", "")),
+            props.get("num_pess", props.get("NUM_PESS", "")),
+            props.get("num_domi", props.get("NUM_DOMI", "")),
+            props.get("num_edif", props.get("NUM_EDIF", "")),
+            props.get("data_setor", props.get("DATA_SETOR", "")),
+            props.get("num_setor", props.get("NUM_SETOR", "")),
         ])
 
-    if not feats_ok:
+    if not feats2:
         return
 
-    gj2 = {"type": "FeatureCollection", "features": feats_ok}
-    z = [1] * len(locations)
+    gj2 = {"type": "FeatureCollection", "features": feats2}
 
     fig.add_trace(
         go.Choroplethmapbox(
             geojson=gj2,
             featureidkey="properties.id",
-            locations=locations,
-            z=z,
+            locations=locs,
+            z=[1] * len(locs),
             colorscale=[[0, "rgba(0,0,0,0)"], [1, "rgba(0,0,0,0)"]],
             showscale=False,
-            marker_opacity=0.0,
+            marker_opacity=0.0,            # invisível
             marker_line_width=0,
             marker_line_color="rgba(0,0,0,0)",
             showlegend=False,
-            customdata=customdata,
+            customdata=custom,
             hovertemplate=(
                 "<b>Setor de risco (SGB)</b><br>"
-                "UF: %{customdata[0]}<br>"
-                "Município: %{customdata[1]}<br>"
-                "CD IBGE: %{customdata[2]}<br>"
-                "Setor: %{customdata[3]}<br>"
-                "Data: %{customdata[4]}<br>"
-                "Local: %{customdata[5]}<br><br>"
-                "<b>Grau de risco:</b> %{customdata[6]}<br>"
-                "<b>Grau de vulnerabilidade:</b> %{customdata[7]}<br><br>"
+                "Município/UF: %{customdata[0]} - %{customdata[1]}<br>"
+                "<b>Grau de risco:</b> %{customdata[2]}<br>"
+                "<b>Grau de vulnerabilidade:</b> %{customdata[3]}<br>"
+                "<b>Local:</b> %{customdata[9]}<br>"
+                "<b>Setor:</b> %{customdata[14]} | <b>Data:</b> %{customdata[13]}<br><br>"
                 "<b>Tipologias</b><br>"
-                "G1: %{customdata[8]}<br>"
-                "G2: %{customdata[9]}<br>"
-                "G3: %{customdata[10]}<br>"
-                "G4: %{customdata[11]}<br>"
-                "G5: %{customdata[12]}<br><br>"
-                "Edificações: %{customdata[13]}<br>"
-                "Domicílios: %{customdata[14]}<br>"
-                "Pessoas: %{customdata[15]}<br>"
-                "Órgão: %{customdata[16]}"
+                "G1: %{customdata[4]}<br>"
+                "G2: %{customdata[5]}<br>"
+                "G3: %{customdata[6]}<br>"
+                "G4: %{customdata[7]}<br>"
+                "G5: %{customdata[8]}<br><br>"
+                "Pessoas: %{customdata[10]} | Domicílios: %{customdata[11]} | Edificações: %{customdata[12]}"
                 "<extra></extra>"
             ),
             name="_sgb_hover"
@@ -547,7 +561,6 @@ def construir_mapa_sobreposicao(var_key: str, data_iso: str | None, camada_unida
 
     fig = go.Figure()
 
-    # ✅ REMOVIDO minzoom/maxzoom (Plotly 6+ não aceita no layout.mapbox)
     fig.update_layout(
         mapbox=dict(
             style="open-street-map",
@@ -573,7 +586,6 @@ def construir_mapa_sobreposicao(var_key: str, data_iso: str | None, camada_unida
         uirevision="overlay_lock",
     )
 
-    # âncora invisível pra garantir mapbox sempre
     fig.add_trace(
         go.Scattermapbox(
             lat=[center_lat],
@@ -605,7 +617,6 @@ def construir_mapa_sobreposicao(var_key: str, data_iso: str | None, camada_unida
                         if data_iso else "Camada previsão: (arquivo não encontrado)"
                     )
             else:
-                # tenta Choroplethmapbox “correto”
                 try:
                     for i, ft in enumerate(feats):
                         props = ft.get("properties", {}) or {}
@@ -640,7 +651,6 @@ def construir_mapa_sobreposicao(var_key: str, data_iso: str | None, camada_unida
                         )
                     print("✅ Overlay previsão: Choroplethmapbox OK")
                 except Exception as e_choro:
-                    # fallback estável: mapbox.layers
                     print(f"⚠️ Choroplethmapbox falhou, usando fallback mapbox.layers: {repr(e_choro)}")
                     layers = []
                     for i, ft in enumerate(feats):
@@ -657,7 +667,6 @@ def construir_mapa_sobreposicao(var_key: str, data_iso: str | None, camada_unida
                             "opacity": 0.60,
                         })
 
-                        # legenda “fake” pra listar classes
                         fig.add_trace(
                             go.Scattermapbox(
                                 lat=[center_lat],
@@ -688,17 +697,17 @@ def construir_mapa_sobreposicao(var_key: str, data_iso: str | None, camada_unida
             arq_sgb = resolver_arquivo_geojson_sgb()
             print(f"ℹ️ Overlay: tentando SGB -> {arq_sgb}")
 
-            # Hover (invisível) com atributos completos
-            add_sgb_hover_trace(fig, arq_sgb)
+            # 1) hover invisível (não mexe na previsão)
+            add_sgb_hover_layer(fig, arq_sgb)
 
-            # Contorno colorido por classe (sem escala)
+            # 2) contorno colorido por classe (SEM BARRA DE COR)
             add_sgb_risk_layer(
                 fig=fig,
                 geojson_path=arq_sgb,
                 center_lat=center_lat,
                 center_lon=center_lon,
                 line_width=2,
-                show_colorbar=False
+                show_colorbar=False,   # <<< AQUI: tira a escala
             )
         except Exception as e:
             print(f"❌ ERRO no overlay (SGB): {repr(e)}")
