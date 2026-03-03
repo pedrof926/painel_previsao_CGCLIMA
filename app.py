@@ -3,6 +3,31 @@
 Painel Dash para visualizar as figuras geradas pelo ECMWF
 + mapa de SOBREPOSIÇÃO (camada previsão GeoJSON + pontos de unidades UPA/UBS/UBSI)
 + camada SGB (Setores de Risco) como POLÍGONOS ORIGINAIS sem preenchimento (apenas contorno).
+
+Arquivos esperados no MESMO repo (Render):
+- PNGs na raiz:
+    ecmwf_prec_YYYY-MM-DD.png
+    ecmwf_tmin_YYYY-MM-DD.png
+    ecmwf_tmax_YYYY-MM-DD.png
+    ecmwf_tmed_YYYY-MM-DD.png
+    ecmwf_prec_acumulada_YYYY-MM-DD_a_YYYY-MM-DD.png
+
+- Unidades (Point GeoJSON) na raiz:
+    upa.geojson
+    ubs.geojson
+    ubsi.geojson
+  (pode estar com letras maiúsculas/minúsculas variadas; o app resolve)
+
+- Camadas previsão (GeoJSON MultiPolygon por classe) em:
+    camadas_geojson/  OU na raiz
+      prec_YYYY-MM-DD.geojson
+      tmin_YYYY-MM-DD.geojson
+      tmax_YYYY-MM-DD.geojson
+      tmed_YYYY-MM-DD.geojson
+      prec_acum_YYYY-MM-DD_a_YYYY-MM-DD.geojson
+
+- Setores de risco SGB (Polygon/MultiPolygon) na raiz:
+    setor_risco_sgb_leve.geojson  (ou nome parecido; o app resolve por "setor_risco" e "sgb")
 """
 
 from pathlib import Path
@@ -14,7 +39,6 @@ from dash import Dash, html, dcc, Input, Output
 import dash_bootstrap_components as dbc
 import plotly.graph_objects as go
 
-
 # ----------------- CONFIGURAÇÕES ----------------- #
 BASE_DIR = Path(__file__).parent
 IMG_DIR = BASE_DIR
@@ -22,6 +46,7 @@ IMG_DIR = BASE_DIR
 CAMADAS_DIR = BASE_DIR / "camadas_geojson"
 CAMADAS_FALLBACK_DIRS = [CAMADAS_DIR, BASE_DIR]  # procura primeiro na pasta, depois na raiz
 
+# Recorte padrão (igual às figuras)
 # (lon_min, lon_max, lat_min, lat_max)
 EXTENT = (-90, -30, -60, 15)
 
@@ -169,7 +194,6 @@ def construir_animacao(var_key: str, datas_iso: list[str], titulo: str) -> go.Fi
     )
     return fig
 
-
 # ----------------- HELPERS (RESOLVER ARQUIVOS NA RAIZ, CASE-INSENSITIVE) ----------------- #
 def resolver_arquivo_geojson_unidades(key: str) -> Path | None:
     target = f"{key}.geojson".lower()
@@ -178,9 +202,12 @@ def resolver_arquivo_geojson_unidades(key: str) -> Path | None:
             return p
     return None
 
-
-# ----------------- HELPERS (SGB) ----------------- #
+# ----------------- HELPERS (SGB: SETORES DE RISCO) ----------------- #
 def resolver_arquivo_geojson_sgb() -> Path | None:
+    """
+    Procura um geojson de setores de risco na raiz.
+    Prioriza nomes que contenham 'setor_risco' e 'sgb' (case-insensitive).
+    """
     cands = list(BASE_DIR.glob("*.geojson"))
     if not cands:
         return None
@@ -205,6 +232,10 @@ def resolver_arquivo_geojson_sgb() -> Path | None:
     return best if score(best) > 0 else None
 
 def _polygon_to_lines(coords):
+    """
+    coords: lista de anéis (ring). Cada ring é lista [ [lon,lat], [lon,lat], ... ]
+    Retorna (lons, lats) com None separando segmentos para Scattermapbox.
+    """
     lons, lats = [], []
     for ring in coords:
         for lon, lat in ring:
@@ -215,12 +246,17 @@ def _polygon_to_lines(coords):
     return lons, lats
 
 def _norm_risco(x: str) -> str:
-    s = (x or "").strip().lower().replace("medio", "médio")
+    s = (x or "").strip().lower()
+    # normaliza variações comuns
+    s = s.replace("muito alto", "muito alto").replace("muito alta", "muito alto")
+    s = s.replace("medio", "médio")
+    s = s.replace("muito alto", "muito alto")
+    # mantém os rótulos finais:
     if "muito" in s and "alto" in s:
         return "Muito alto"
     if "alto" in s:
         return "Alto"
-    if "médio" in s:
+    if "médio" in s or "medio" in s:
         return "Médio"
     if "baixo" in s:
         return "Baixo"
@@ -228,8 +264,13 @@ def _norm_risco(x: str) -> str:
 
 def add_sgb_risk_layer(fig: go.Figure, geojson_path: Path | None, center_lat: float, center_lon: float,
                        line_width: int = 2, show_colorbar: bool = True) -> None:
+    """
+    Adiciona ao fig:
+    - polígonos SGB como contorno (sem preenchimento), cor por grau_risco
+    - uma colorbar (barra) representando as classes
+    """
     if (geojson_path is None) or (not geojson_path.exists()):
-        print("⚠️ GeoJSON SGB não encontrado na raiz.")
+        print("⚠️ GeoJSON SGB não encontrado na raiz (camada SGB desligada/ausente).")
         return
 
     with open(geojson_path, "r", encoding="utf-8") as f:
@@ -238,6 +279,7 @@ def add_sgb_risk_layer(fig: go.Figure, geojson_path: Path | None, center_lat: fl
     feats = gj.get("features", []) or []
     print(f"ℹ️ SGB: arquivo={geojson_path.name} | features={len(feats)}")
 
+    # ordem e cores (fixas)
     ordem = ["Baixo", "Médio", "Alto", "Muito alto"]
     cores = {
         "Baixo": "#2ECC71",
@@ -247,90 +289,85 @@ def add_sgb_risk_layer(fig: go.Figure, geojson_path: Path | None, center_lat: fl
         "Sem classe": "#7F8C8D",
     }
 
-    linhas = {k: {"lon": [], "lat": [], "text": []} for k in ordem + ["Sem classe"]}
-
-    def _props_to_hover(props: dict) -> str:
-        if not props:
-            return "<b>SGB</b><br>Sem propriedades"
-        parts = []
-        for k in sorted(props.keys(), key=lambda x: str(x).lower()):
-            v = props.get(k)
-            if v is None:
-                continue
-            parts.append(f"{k}: {v}")
-        return "<b>SGB</b><br>" + "<br>".join(parts) if parts else "<b>SGB</b><br>Sem propriedades"
-
-    def _append_with_hover(target_key: str, lons: list, lats: list, hover_str: str):
-        texts = [hover_str if (x is not None) else "" for x in lons]
-        linhas[target_key]["lon"].extend(lons)
-        linhas[target_key]["lat"].extend(lats)
-        linhas[target_key]["text"].extend(texts)
+    # acumular linhas por classe
+    linhas = {k: ([], []) for k in ordem + ["Sem classe"]}
 
     for ft in feats:
-        geom = ft.get("geometry")
+        geom = ft.get("geometry", None)
         if not geom:
-            continue
+            continue  # ignora geometry null
+
         props = ft.get("properties", {}) or {}
-        risco_raw = props.get("grau_risco", props.get("GRAU_RISCO"))
+        risco_raw = props.get("grau_risco", props.get("GRAU_RISCO", None))
         risco = _norm_risco(str(risco_raw)) if risco_raw is not None else "Sem classe"
-        hover_str = _props_to_hover(props)
 
         gtype = (geom.get("type") or "").strip()
         coords = geom.get("coordinates", [])
 
         if gtype == "Polygon":
             lons, lats = _polygon_to_lines(coords)
-            _append_with_hover(risco, lons, lats, hover_str)
+            linhas.setdefault(risco, ([], []))
+            linhas[risco][0].extend(lons)
+            linhas[risco][1].extend(lats)
+
         elif gtype == "MultiPolygon":
+            linhas.setdefault(risco, ([], []))
             for poly in coords:
                 lons, lats = _polygon_to_lines(poly)
-                _append_with_hover(risco, lons, lats, hover_str)
+                linhas[risco][0].extend(lons)
+                linhas[risco][1].extend(lats)
 
+    # adiciona uma trace de linhas por classe (só contorno)
     for risco in ordem + ["Sem classe"]:
-        if not linhas[risco]["lon"]:
+        if risco not in linhas:
             continue
+        lons, lats = linhas[risco]
+        if not lons:
+            continue
+
         fig.add_trace(
             go.Scattermapbox(
-                lon=linhas[risco]["lon"],
-                lat=linhas[risco]["lat"],
+                lon=lons,
+                lat=lats,
                 mode="lines",
                 line=dict(width=line_width, color=cores.get(risco, "#7F8C8D")),
                 name=f"SGB – {risco}",
                 legendgroup="sgb",
-                text=linhas[risco]["text"],
-                hovertemplate="%{text}<extra></extra>",
+                hoverinfo="skip",
                 showlegend=True,
             )
         )
 
+    # colorbar "helper" invisível (para aparecer a barra sem preencher polígonos)
     if show_colorbar:
         z_vals = list(range(len(ordem)))
-        colorscale = [(i / (len(ordem) - 1), cores[rot]) for i, rot in enumerate(ordem)]
-        fig.add_trace(
-            go.Scattermapbox(
-                lon=[center_lon + 0.01 * i for i in z_vals],
-                lat=[center_lat + 0.01 * i for i in z_vals],
-                mode="markers",
-                marker=dict(
-                    size=0.1,
-                    opacity=0,
-                    color=z_vals,
-                    colorscale=colorscale,
-                    cmin=0,
-                    cmax=max(z_vals),
-                    colorbar=dict(
-                        title="Grau de risco (SGB)",
-                        tickmode="array",
-                        tickvals=z_vals,
-                        ticktext=ordem,
-                    ),
-                ),
-                showlegend=False,
-                hoverinfo="skip",
-                name="SGB colorbar helper",
-            )
-        )
+        if z_vals:
+            colorscale = [(i / (len(ordem) - 1), cores[rot]) for i, rot in enumerate(ordem)] if len(ordem) > 1 else [(0, cores[ordem[0]]), (1, cores[ordem[0]])]
 
+            fig.add_trace(
+                go.Scattermapbox(
+                    lon=[center_lon + 0.01 * i for i in z_vals],
+                    lat=[center_lat + 0.01 * i for i in z_vals],
+                    mode="markers",
+                    marker=dict(
+                        size=0.1,
+                        opacity=0,  # invisível
+                        color=z_vals,
+                        colorscale=colorscale,
+                        cmin=0,
+                        cmax=max(z_vals),
+                        colorbar=dict(
+                            title="Grau de risco (SGB)",
+                            tickmode="array",
+                            tickvals=z_vals,
+                            ticktext=ordem,
+                        ),
+                    ),
+                    showlegend=False,
+                    hoverinfo="skip",
+                    name="SGB colorbar helper",
+                )
+            )
 
 # ----------------- HELPERS (UNIDADES) ----------------- #
 def carregar_geojson_points(caminho: Path | None, camada: str):
@@ -353,6 +390,7 @@ def carregar_geojson_points(caminho: Path | None, camada: str):
     for ft in feats:
         geom = ft.get("geometry", {}) or {}
         props = ft.get("properties", {}) or {}
+
         gtype = (geom.get("type") or "").strip().lower()
 
         nome = (
@@ -368,7 +406,7 @@ def carregar_geojson_points(caminho: Path | None, camada: str):
         cod_polo = props.get("cod_polo") or props.get("COD_POLO") or ""
 
         if gtype == "point":
-            coords = geom.get("coordinates")
+            coords = geom.get("coordinates", None)
             if not coords or len(coords) < 2:
                 continue
             lon = _to_float(coords[0]); lat = _to_float(coords[1])
@@ -378,7 +416,7 @@ def carregar_geojson_points(caminho: Path | None, camada: str):
             custom.append([camada.upper(), nome, cnes, cd_mun, dsei, polo, cod_polo, lat, lon])
 
         elif gtype == "multipoint":
-            coords_list = geom.get("coordinates")
+            coords_list = geom.get("coordinates", None)
             if not coords_list:
                 continue
             for coords in coords_list:
@@ -391,7 +429,6 @@ def carregar_geojson_points(caminho: Path | None, camada: str):
                 custom.append([camada.upper(), nome, cnes, cd_mun, dsei, polo, cod_polo, lat, lon])
 
     return lats, lons, custom
-
 
 # ----------------- HELPERS (CAMADAS PREVISÃO) ----------------- #
 def _latest_file_in_dirs(pattern: str) -> Path | None:
@@ -430,7 +467,6 @@ def carregar_geojson_poligonos_por_classe(path_geojson: Path | None):
 
     return sorted(feats, key=_ord)
 
-
 # ----------------- MAPA OVERLAY ----------------- #
 def construir_mapa_sobreposicao(var_key: str, data_iso: str | None, camada_unidade: str,
                                mostrar_previsao: bool, mostrar_unidades: bool, mostrar_sgb: bool) -> go.Figure:
@@ -440,6 +476,7 @@ def construir_mapa_sobreposicao(var_key: str, data_iso: str | None, camada_unida
 
     fig = go.Figure()
 
+    # ✅ REMOVIDO minzoom/maxzoom (Plotly 6+ não aceita no layout.mapbox)
     fig.update_layout(
         mapbox=dict(
             style="open-street-map",
@@ -462,10 +499,10 @@ def construir_mapa_sobreposicao(var_key: str, data_iso: str | None, camada_unida
             traceorder="normal",
             font=dict(size=11),
         ),
-        # 🔒 mantém zoom/pan do usuário, mas NÃO impede atualizar camadas
         uirevision="overlay_lock",
     )
 
+    # âncora invisível pra garantir mapbox sempre
     fig.add_trace(
         go.Scattermapbox(
             lat=[center_lat],
@@ -480,6 +517,7 @@ def construir_mapa_sobreposicao(var_key: str, data_iso: str | None, camada_unida
 
     titulo_prev = "Camada previsão: (desligada)"
 
+    # --- PREVISÃO (POLÍGONOS) ---
     if mostrar_previsao:
         try:
             p = caminho_camadas_previsao_exata(var_key, data_iso)
@@ -496,6 +534,7 @@ def construir_mapa_sobreposicao(var_key: str, data_iso: str | None, camada_unida
                         if data_iso else "Camada previsão: (arquivo não encontrado)"
                     )
             else:
+                # tenta Choroplethmapbox “correto”
                 try:
                     for i, ft in enumerate(feats):
                         props = ft.get("properties", {}) or {}
@@ -507,6 +546,7 @@ def construir_mapa_sobreposicao(var_key: str, data_iso: str | None, camada_unida
                         ft2_props = dict(props)
                         ft2_props["id"] = f"classe_{ordem}"
                         ft2["properties"] = ft2_props
+
                         gj_one = {"type": "FeatureCollection", "features": [ft2]}
 
                         fig.add_trace(
@@ -527,8 +567,10 @@ def construir_mapa_sobreposicao(var_key: str, data_iso: str | None, camada_unida
                                 showlegend=True,
                             )
                         )
+                    print("✅ Overlay previsão: Choroplethmapbox OK")
                 except Exception as e_choro:
-                    print(f"⚠️ Choroplethmapbox falhou, usando mapbox.layers: {repr(e_choro)}")
+                    # fallback estável: mapbox.layers
+                    print(f"⚠️ Choroplethmapbox falhou, usando fallback mapbox.layers: {repr(e_choro)}")
                     layers = []
                     for i, ft in enumerate(feats):
                         props = ft.get("properties", {}) or {}
@@ -544,6 +586,7 @@ def construir_mapa_sobreposicao(var_key: str, data_iso: str | None, camada_unida
                             "opacity": 0.60,
                         })
 
+                        # legenda “fake” pra listar classes
                         fig.add_trace(
                             go.Scattermapbox(
                                 lat=[center_lat],
@@ -558,6 +601,7 @@ def construir_mapa_sobreposicao(var_key: str, data_iso: str | None, camada_unida
                             )
                         )
                     fig.update_layout(mapbox=dict(layers=layers))
+                    print("✅ Overlay previsão: mapbox.layers OK")
 
                 if var_key == "prec_acum":
                     titulo_prev = "Camada previsão: Precipitação acumulada"
@@ -567,6 +611,7 @@ def construir_mapa_sobreposicao(var_key: str, data_iso: str | None, camada_unida
             print(f"❌ ERRO no overlay (previsão): {repr(e)}")
             titulo_prev = "Camada previsão: (erro ao carregar)"
 
+    # --- SGB (SETOR DE RISCO) — POLÍGONOS ORIGINAIS, SÓ CONTORNO ---
     if mostrar_sgb:
         try:
             arq_sgb = resolver_arquivo_geojson_sgb()
@@ -577,11 +622,12 @@ def construir_mapa_sobreposicao(var_key: str, data_iso: str | None, camada_unida
                 center_lat=center_lat,
                 center_lon=center_lon,
                 line_width=2,
-                show_colorbar=False
+                show_colorbar=True
             )
         except Exception as e:
             print(f"❌ ERRO no overlay (SGB): {repr(e)}")
 
+    # --- UNIDADES (PONTOS) ---
     if mostrar_unidades:
         try:
             arq = resolver_arquivo_geojson_unidades(camada_unidade)
@@ -620,15 +666,13 @@ def construir_mapa_sobreposicao(var_key: str, data_iso: str | None, camada_unida
         f" + {('SGB: (ligado)' if mostrar_sgb else 'SGB: (desligado)')}"
         f" + {('Unidades: ' + camada_unidade.upper()) if mostrar_unidades else 'Unidades: (desligadas)'}"
     )
-
-    # datarevision muda => obriga Plotly a aceitar atualização
     datarevision_key = f"{var_key}|{data_iso}|{camada_unidade}|{int(mostrar_previsao)}|{int(mostrar_unidades)}|{int(mostrar_sgb)}"
+
     fig.update_layout(
         title=dict(text=titulo, x=0.5, xanchor="center"),
         datarevision=datarevision_key,
     )
     return fig
-
 
 # ----------------- PREPARA LISTA DE DATAS ----------------- #
 DATAS = listar_datas_disponiveis()
@@ -748,12 +792,15 @@ app.layout = dbc.Container(
             className="mb-2",
         ),
 
-        # ✅ AQUI está a correção: wrapper que vai recriar o Graph com KEY novo
         dbc.Row(
             [
                 dbc.Col(
                     [
-                        html.Div(id="overlay-container")
+                        dcc.Graph(
+                            id="graph-overlay",
+                            style={"height": "65vh"},
+                            config={"scrollZoom": True, "displayModeBar": False},
+                        )
                     ]
                 )
             ],
@@ -796,24 +843,6 @@ def atualizar_mapa_previsao(data_iso, var_key, modo):
 
     titulo = f"{info['label']} – (animação)"
     return construir_animacao(var_key, DATAS, titulo)
-
-# ✅ cria/recria o componente dcc.Graph (força remount)
-@app.callback(
-    Output("overlay-container", "children"),
-    Input("dropdown-data", "value"),
-    Input("radio-var", "value"),
-    Input("dropdown-unidades", "value"),
-    Input("check-overlay", "value"),
-)
-def rebuild_overlay_graph(data_iso, var_key, camada_unidade, check_values):
-    check_values = check_values or []
-    key = f"{data_iso}|{var_key}|{camada_unidade}|{','.join(sorted(check_values))}"
-    return dcc.Graph(
-        id="graph-overlay",
-        key=key,  # ✅ isso resolve “não atualizar”
-        style={"height": "65vh"},
-        config={"scrollZoom": True, "displayModeBar": False},
-    )
 
 @app.callback(
     Output("graph-overlay", "figure"),
