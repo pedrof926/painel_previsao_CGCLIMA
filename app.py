@@ -267,7 +267,8 @@ def add_sgb_risk_layer(fig: go.Figure, geojson_path: Path | None, center_lat: fl
     """
     Adiciona ao fig:
     - polígonos SGB como contorno (sem preenchimento), cor por grau_risco
-    - uma colorbar (barra) representando as classes
+    - (opcional) colorbar helper
+    - ✅ agora com hover mostrando as propriedades do GeoJSON do SGB
     """
     if (geojson_path is None) or (not geojson_path.exists()):
         print("⚠️ GeoJSON SGB não encontrado na raiz (camada SGB desligada/ausente).")
@@ -289,8 +290,29 @@ def add_sgb_risk_layer(fig: go.Figure, geojson_path: Path | None, center_lat: fl
         "Sem classe": "#7F8C8D",
     }
 
-    # acumular linhas por classe
-    linhas = {k: ([], []) for k in ordem + ["Sem classe"]}
+    # ✅ acumular linhas + hovertext por classe
+    linhas = {k: {"lon": [], "lat": [], "text": []} for k in ordem + ["Sem classe"]}
+
+    def _props_to_hover(props: dict) -> str:
+        # mostra tudo que vier no properties (sem inventar campo)
+        if not props:
+            return "<b>SGB</b><br>Sem propriedades"
+        parts = []
+        for k in sorted(props.keys(), key=lambda x: str(x).lower()):
+            v = props.get(k)
+            if v is None:
+                continue
+            parts.append(f"{k}: {v}")
+        if not parts:
+            return "<b>SGB</b><br>Sem propriedades"
+        return "<b>SGB</b><br>" + "<br>".join(parts)
+
+    def _append_with_hover(target_key: str, lons: list, lats: list, hover_str: str):
+        # cria lista de text alinhada ("" nos separadores None)
+        texts = [hover_str if (x is not None) else "" for x in lons]
+        linhas[target_key]["lon"].extend(lons)
+        linhas[target_key]["lat"].extend(lats)
+        linhas[target_key]["text"].extend(texts)
 
     for ft in feats:
         geom = ft.get("geometry", None)
@@ -301,27 +323,31 @@ def add_sgb_risk_layer(fig: go.Figure, geojson_path: Path | None, center_lat: fl
         risco_raw = props.get("grau_risco", props.get("GRAU_RISCO", None))
         risco = _norm_risco(str(risco_raw)) if risco_raw is not None else "Sem classe"
 
+        hover_str = _props_to_hover(props)
+
         gtype = (geom.get("type") or "").strip()
         coords = geom.get("coordinates", [])
 
         if gtype == "Polygon":
             lons, lats = _polygon_to_lines(coords)
-            linhas.setdefault(risco, ([], []))
-            linhas[risco][0].extend(lons)
-            linhas[risco][1].extend(lats)
+            if risco not in linhas:
+                linhas[risco] = {"lon": [], "lat": [], "text": []}
+            _append_with_hover(risco, lons, lats, hover_str)
 
         elif gtype == "MultiPolygon":
-            linhas.setdefault(risco, ([], []))
+            if risco not in linhas:
+                linhas[risco] = {"lon": [], "lat": [], "text": []}
             for poly in coords:
                 lons, lats = _polygon_to_lines(poly)
-                linhas[risco][0].extend(lons)
-                linhas[risco][1].extend(lats)
+                _append_with_hover(risco, lons, lats, hover_str)
 
-    # adiciona uma trace de linhas por classe (só contorno)
+    # adiciona uma trace de linhas por classe (só contorno) + ✅ hover com properties
     for risco in ordem + ["Sem classe"]:
         if risco not in linhas:
             continue
-        lons, lats = linhas[risco]
+        lons = linhas[risco]["lon"]
+        lats = linhas[risco]["lat"]
+        texts = linhas[risco]["text"]
         if not lons:
             continue
 
@@ -333,12 +359,13 @@ def add_sgb_risk_layer(fig: go.Figure, geojson_path: Path | None, center_lat: fl
                 line=dict(width=line_width, color=cores.get(risco, "#7F8C8D")),
                 name=f"SGB – {risco}",
                 legendgroup="sgb",
-                hoverinfo="skip",
+                text=texts,
+                hovertemplate="%{text}<extra></extra>",
                 showlegend=True,
             )
         )
 
-    # colorbar "helper" invisível (para aparecer a barra sem preencher polígonos)
+    # colorbar helper (mantém igual; você já está chamando show_colorbar=False no overlay)
     if show_colorbar:
         z_vals = list(range(len(ordem)))
         if z_vals:
