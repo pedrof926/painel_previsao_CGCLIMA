@@ -2,8 +2,7 @@
 """
 Painel Dash para visualizar as figuras geradas pelo ECMWF
 + mapa de SOBREPOSIÇÃO (camada previsão GeoJSON + pontos de unidades UPA/UBS/UBSI)
-+ camada SGB (Setores de Risco) como POLÍGONOS ORIGINAIS sem preenchimento (apenas contorno),
-  SEM barra/escala, mas COM hover exibindo as propriedades do setor.
++ camada SGB (Setores de Risco) como POLÍGONOS ORIGINAIS sem preenchimento (apenas contorno).
 
 Arquivos esperados no MESMO repo (Render):
 - PNGs na raiz:
@@ -17,6 +16,7 @@ Arquivos esperados no MESMO repo (Render):
     upa.geojson
     ubs.geojson
     ubsi.geojson
+  (pode estar com letras maiúsculas/minúsculas variadas; o app resolve)
 
 - Camadas previsão (GeoJSON MultiPolygon por classe) em:
     camadas_geojson/  OU na raiz
@@ -227,26 +227,47 @@ def resolver_arquivo_geojson_sgb() -> Path | None:
             s += 1
         return s
 
-    best = sorted(cands, key=score)[-1]
+    cands_sorted = sorted(cands, key=score)
+    best = cands_sorted[-1]
     return best if score(best) > 0 else None
+
+def _polygon_to_lines(coords):
+    """
+    coords: lista de anéis (ring). Cada ring é lista [ [lon,lat], [lon,lat], ... ]
+    Retorna (lons, lats) com None separando segmentos para Scattermapbox.
+    """
+    lons, lats = [], []
+    for ring in coords:
+        for lon, lat in ring:
+            lons.append(lon)
+            lats.append(lat)
+        lons.append(None)
+        lats.append(None)
+    return lons, lats
 
 def _norm_risco(x: str) -> str:
     s = (x or "").strip().lower()
+    # normaliza variações comuns
+    s = s.replace("muito alto", "muito alto").replace("muito alta", "muito alto")
     s = s.replace("medio", "médio")
+    s = s.replace("muito alto", "muito alto")
+    # mantém os rótulos finais:
     if "muito" in s and "alto" in s:
         return "Muito alto"
-    if s == "alto" or ("alto" in s and "muito" not in s):
+    if "alto" in s:
         return "Alto"
-    if "médio" in s:
+    if "médio" in s or "medio" in s:
         return "Médio"
     if "baixo" in s:
         return "Baixo"
     return (x or "").strip() or "Sem classe"
 
-def add_sgb_risk_layer(fig: go.Figure, geojson_path: Path | None) -> None:
+def add_sgb_risk_layer(fig: go.Figure, geojson_path: Path | None, center_lat: float, center_lon: float,
+                       line_width: int = 2, show_colorbar: bool = True) -> None:
     """
-    SGB como polígonos ORIGINAIS, sem preenchimento (apenas contorno), cor por grau_risco.
-    SEM colorbar. COM hover mostrando as propriedades do setor.
+    Adiciona ao fig:
+    - polígonos SGB como contorno (sem preenchimento), cor por grau_risco
+    - uma colorbar (barra) representando as classes
     """
     if (geojson_path is None) or (not geojson_path.exists()):
         print("⚠️ GeoJSON SGB não encontrado na raiz (camada SGB desligada/ausente).")
@@ -258,6 +279,7 @@ def add_sgb_risk_layer(fig: go.Figure, geojson_path: Path | None) -> None:
     feats = gj.get("features", []) or []
     print(f"ℹ️ SGB: arquivo={geojson_path.name} | features={len(feats)}")
 
+    # ordem e cores (fixas)
     ordem = ["Baixo", "Médio", "Alto", "Muito alto"]
     cores = {
         "Baixo": "#2ECC71",
@@ -267,80 +289,85 @@ def add_sgb_risk_layer(fig: go.Figure, geojson_path: Path | None) -> None:
         "Sem classe": "#7F8C8D",
     }
 
-    grupos = {k: [] for k in ordem + ["Sem classe"]}
+    # acumular linhas por classe
+    linhas = {k: ([], []) for k in ordem + ["Sem classe"]}
 
-    for idx, ft in enumerate(feats):
+    for ft in feats:
         geom = ft.get("geometry", None)
         if not geom:
-            continue
+            continue  # ignora geometry null
 
         props = ft.get("properties", {}) or {}
         risco_raw = props.get("grau_risco", props.get("GRAU_RISCO", None))
         risco = _norm_risco(str(risco_raw)) if risco_raw is not None else "Sem classe"
-        if risco not in grupos:
-            risco = "Sem classe"
 
-        ft2 = dict(ft)
-        props2 = dict(props)
-        props2["__id__"] = f"sgb_{idx}"
-        ft2["properties"] = props2
+        gtype = (geom.get("type") or "").strip()
+        coords = geom.get("coordinates", [])
 
-        grupos[risco].append(ft2)
+        if gtype == "Polygon":
+            lons, lats = _polygon_to_lines(coords)
+            linhas.setdefault(risco, ([], []))
+            linhas[risco][0].extend(lons)
+            linhas[risco][1].extend(lats)
 
-    def _hover_text(props: dict) -> str:
-        prefer = [
-            "tipologia", "TIPOLOGIA",
-            "municipio", "MUNICIPIO", "município", "MUNICÍPIO",
-            "uf", "UF",
-            "grau_risco", "GRAU_RISCO",
-        ]
-        linhas = []
-        seen = set()
+        elif gtype == "MultiPolygon":
+            linhas.setdefault(risco, ([], []))
+            for poly in coords:
+                lons, lats = _polygon_to_lines(poly)
+                linhas[risco][0].extend(lons)
+                linhas[risco][1].extend(lats)
 
-        for k in prefer:
-            if k in props and k not in seen:
-                v = props.get(k)
-                if v not in (None, "", "null"):
-                    linhas.append(f"<b>{k}</b>: {v}")
-                seen.add(k)
-
-        for k in sorted(props.keys()):
-            if k in seen or k == "__id__":
-                continue
-            v = props.get(k)
-            if v in (None, "", "null"):
-                continue
-            linhas.append(f"<b>{k}</b>: {v}")
-
-        return "<br>".join(linhas) if linhas else "<b>SGB</b>: sem atributos"
-
+    # adiciona uma trace de linhas por classe (só contorno)
     for risco in ordem + ["Sem classe"]:
-        feats_r = grupos.get(risco, [])
-        if not feats_r:
+        if risco not in linhas:
+            continue
+        lons, lats = linhas[risco]
+        if not lons:
             continue
 
-        gj_class = {"type": "FeatureCollection", "features": feats_r}
-        locs = [ft["properties"]["__id__"] for ft in feats_r]
-        texts = [_hover_text(ft.get("properties", {}) or {}) for ft in feats_r]
-
         fig.add_trace(
-            go.Choroplethmapbox(
-                geojson=gj_class,
-                featureidkey="properties.__id__",
-                locations=locs,
-                z=[1] * len(locs),
-                colorscale=[[0, cores.get(risco, "#7F8C8D")], [1, cores.get(risco, "#7F8C8D")]],
-                showscale=False,               # <-- SEM barra de cor
-                marker_opacity=0.0,            # <-- SEM preenchimento
-                marker_line_width=2,           # contorno
-                marker_line_color=cores.get(risco, "#7F8C8D"),
+            go.Scattermapbox(
+                lon=lons,
+                lat=lats,
+                mode="lines",
+                line=dict(width=line_width, color=cores.get(risco, "#7F8C8D")),
                 name=f"SGB – {risco}",
                 legendgroup="sgb",
+                hoverinfo="skip",
                 showlegend=True,
-                text=texts,
-                hovertemplate="%{text}<extra></extra>",
             )
         )
+
+    # colorbar "helper" invisível (para aparecer a barra sem preencher polígonos)
+    if show_colorbar:
+        z_vals = list(range(len(ordem)))
+        if z_vals:
+            colorscale = [(i / (len(ordem) - 1), cores[rot]) for i, rot in enumerate(ordem)] if len(ordem) > 1 else [(0, cores[ordem[0]]), (1, cores[ordem[0]])]
+
+            fig.add_trace(
+                go.Scattermapbox(
+                    lon=[center_lon + 0.01 * i for i in z_vals],
+                    lat=[center_lat + 0.01 * i for i in z_vals],
+                    mode="markers",
+                    marker=dict(
+                        size=0.1,
+                        opacity=0,  # invisível
+                        color=z_vals,
+                        colorscale=colorscale,
+                        cmin=0,
+                        cmax=max(z_vals),
+                        colorbar=dict(
+                            title="Grau de risco (SGB)",
+                            tickmode="array",
+                            tickvals=z_vals,
+                            ticktext=ordem,
+                        ),
+                    ),
+                    showlegend=False,
+                    hoverinfo="skip",
+                    name="SGB colorbar helper",
+                )
+            )
 
 # ----------------- HELPERS (UNIDADES) ----------------- #
 def carregar_geojson_points(caminho: Path | None, camada: str):
@@ -449,6 +476,7 @@ def construir_mapa_sobreposicao(var_key: str, data_iso: str | None, camada_unida
 
     fig = go.Figure()
 
+    # ✅ REMOVIDO minzoom/maxzoom (Plotly 6+ não aceita no layout.mapbox)
     fig.update_layout(
         mapbox=dict(
             style="open-street-map",
@@ -474,7 +502,7 @@ def construir_mapa_sobreposicao(var_key: str, data_iso: str | None, camada_unida
         uirevision="overlay_lock",
     )
 
-    # âncora invisível
+    # âncora invisível pra garantir mapbox sempre
     fig.add_trace(
         go.Scattermapbox(
             lat=[center_lat],
@@ -489,7 +517,7 @@ def construir_mapa_sobreposicao(var_key: str, data_iso: str | None, camada_unida
 
     titulo_prev = "Camada previsão: (desligada)"
 
-    # --- PREVISÃO (POLÍGONOS) ---  (igual ao original)
+    # --- PREVISÃO (POLÍGONOS) ---
     if mostrar_previsao:
         try:
             p = caminho_camadas_previsao_exata(var_key, data_iso)
@@ -506,6 +534,7 @@ def construir_mapa_sobreposicao(var_key: str, data_iso: str | None, camada_unida
                         if data_iso else "Camada previsão: (arquivo não encontrado)"
                     )
             else:
+                # tenta Choroplethmapbox “correto”
                 try:
                     for i, ft in enumerate(feats):
                         props = ft.get("properties", {}) or {}
@@ -540,6 +569,7 @@ def construir_mapa_sobreposicao(var_key: str, data_iso: str | None, camada_unida
                         )
                     print("✅ Overlay previsão: Choroplethmapbox OK")
                 except Exception as e_choro:
+                    # fallback estável: mapbox.layers
                     print(f"⚠️ Choroplethmapbox falhou, usando fallback mapbox.layers: {repr(e_choro)}")
                     layers = []
                     for i, ft in enumerate(feats):
@@ -556,6 +586,7 @@ def construir_mapa_sobreposicao(var_key: str, data_iso: str | None, camada_unida
                             "opacity": 0.60,
                         })
 
+                        # legenda “fake” pra listar classes
                         fig.add_trace(
                             go.Scattermapbox(
                                 lat=[center_lat],
@@ -569,9 +600,7 @@ def construir_mapa_sobreposicao(var_key: str, data_iso: str | None, camada_unida
                                 showlegend=True,
                             )
                         )
-
-                    # MUITO IMPORTANTE: não sobrescreve o mapbox inteiro
-                    fig.update_layout(mapbox_layers=layers)
+                    fig.update_layout(mapbox=dict(layers=layers))
                     print("✅ Overlay previsão: mapbox.layers OK")
 
                 if var_key == "prec_acum":
@@ -582,12 +611,19 @@ def construir_mapa_sobreposicao(var_key: str, data_iso: str | None, camada_unida
             print(f"❌ ERRO no overlay (previsão): {repr(e)}")
             titulo_prev = "Camada previsão: (erro ao carregar)"
 
-    # --- SGB (contorno + hover, SEM barra) ---
+    # --- SGB (SETOR DE RISCO) — POLÍGONOS ORIGINAIS, SÓ CONTORNO ---
     if mostrar_sgb:
         try:
             arq_sgb = resolver_arquivo_geojson_sgb()
             print(f"ℹ️ Overlay: tentando SGB -> {arq_sgb}")
-            add_sgb_risk_layer(fig, arq_sgb)
+            add_sgb_risk_layer(
+                fig=fig,
+                geojson_path=arq_sgb,
+                center_lat=center_lat,
+                center_lon=center_lon,
+                line_width=2,
+                show_colorbar=True
+            )
         except Exception as e:
             print(f"❌ ERRO no overlay (SGB): {repr(e)}")
 
