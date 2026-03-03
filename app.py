@@ -526,7 +526,7 @@ def construir_mapa_sobreposicao(var_key: str, data_iso: str | None, camada_unida
             traceorder="normal",
             font=dict(size=11),
         ),
-        uirevision="datarevision_key",
+        uirevision="overlay_lock",
     )
 
     # âncora invisível pra garantir mapbox sempre
