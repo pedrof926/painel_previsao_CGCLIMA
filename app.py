@@ -665,7 +665,7 @@ app.layout = dbc.Container(
             style={"textAlign": "center"},
         ),
         html.Div(
-            "Visualização diária (figuras) + sobreposição (camadas GeoJSON + UPA/UBS/UBSI + Setores de Risco SGB).",
+            "Visualização da previsão meteorológica.",
             className="mb-3",
             style={"textAlign": "center"},
         ),
@@ -676,7 +676,7 @@ app.layout = dbc.Container(
                     [
                         html.H5("Campos de seleção", className="mb-3"),
 
-                        html.Label("Variável (previsão):", className="fw-bold"),
+                        html.Label("Variável Meteorológica:", className="fw-bold"),
                         dcc.RadioItems(
                             id="radio-var",
                             options=[{"label": v["label"], "value": k} for k, v in VAR_OPCOES.items()],
@@ -694,7 +694,7 @@ app.layout = dbc.Container(
                             className="mb-3",
                         ),
 
-                        html.Label("Modo de visualização (previsão PNG):", className="fw-bold"),
+                        html.Label("Modo de visualização:", className="fw-bold"),
                         dcc.RadioItems(
                             id="radio-modo",
                             options=[
@@ -706,13 +706,13 @@ app.layout = dbc.Container(
                             className="mb-2",
                         ),
                         html.Small(
-                            "Obs: Animação não se aplica à precipitação acumulada; nesse caso, o PNG é estático.",
+                            "O modo animação não se aplica à precipitação acumulada, nesse caso, a previsão é estática.",
                             className="text-muted",
                         ),
 
                         html.Hr(),
 
-                        html.Label("Unidades de Saúde (para sobreposição):", className="fw-bold"),
+                        html.Label("Unidades de Saúde:", className="fw-bold"),
                         dcc.Dropdown(
                             id="dropdown-unidades",
                             options=[
@@ -727,13 +727,13 @@ app.layout = dbc.Container(
 
                         html.Hr(),
 
-                        html.Label("Mapa de SOBREPOSIÇÃO (embaixo):", className="fw-bold"),
+                        html.Label("Camadas de Sobreposição:", className="fw-bold"),
                         dcc.Checklist(
                             id="check-overlay",
                             options=[
-                                {"label": "Mostrar previsão (GeoJSON)", "value": "prev"},
-                                {"label": "Mostrar unidades (pontos)", "value": "uni"},
-                                {"label": "Mostrar Setores de Risco (SGB)", "value": "sgb"},
+                                {"label": "Previsão", "value": "prev"},
+                                {"label": "Unidades de Saúde", "value": "uni"},
+                                {"label": "Setores de Risco (SGB)", "value": "sgb"},
                             ],
                             value=["prev", "uni", "sgb"],
                             labelStyle={"display": "block"},
