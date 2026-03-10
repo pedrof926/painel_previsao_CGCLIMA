@@ -740,7 +740,7 @@ app.layout = dbc.Container(
                             className="mb-2",
                         ),
                         html.Small(
-                            "Previsão usa GeoJSON em /camadas_geojson (ou na raiz). Setores SGB: geojson na raiz.",
+                            "As camadas foram elaboradas utilizando arquivos em modo GeoJSON",
                             className="text-muted",
                         ),
                     ],
@@ -778,7 +778,7 @@ app.layout = dbc.Container(
 
         html.Hr(),
         html.Footer(
-            "Fonte: ECMWF Open Data – Processamento local (Pedro / Dash) • Unidades: GeoJSON (UPA/UBS/UBSI) • Camadas: GeoJSON por classes • SGB: Setores de Risco (polígonos)",
+            "Fonte: ECMWF Open Data – Processamento local (Pedro)",
             className="text-muted mt-1 mb-2",
             style={"fontSize": "0.85rem"},
         ),
