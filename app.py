@@ -1,35 +1,4 @@
 # -*- coding: utf-8 -*-
-"""
-Painel Dash para visualizar as figuras geradas pelo ECMWF
-+ mapa de SOBREPOSIÇÃO (camada previsão GeoJSON + pontos de unidades UPA/UBS/UBSI)
-+ camada SGB (Setores de Risco) como POLÍGONOS ORIGINAIS sem preenchimento (apenas contorno).
-
-Arquivos esperados no MESMO repo (Render):
-- PNGs na raiz:
-    ecmwf_prec_YYYY-MM-DD.png
-    ecmwf_tmin_YYYY-MM-DD.png
-    ecmwf_tmax_YYYY-MM-DD.png
-    ecmwf_tmed_YYYY-MM-DD.png
-    ecmwf_prec_acumulada_YYYY-MM-DD_a_YYYY-MM-DD.png
-
-- Unidades (Point GeoJSON) na raiz:
-    upa.geojson
-    ubs.geojson
-    ubsi.geojson
-  (pode estar com letras maiúsculas/minúsculas variadas; o app resolve)
-
-- Camadas previsão (GeoJSON MultiPolygon por classe) em:
-    camadas_geojson/  OU na raiz
-      prec_YYYY-MM-DD.geojson
-      tmin_YYYY-MM-DD.geojson
-      tmax_YYYY-MM-DD.geojson
-      tmed_YYYY-MM-DD.geojson
-      prec_acum_YYYY-MM-DD_a_YYYY-MM-DD.geojson
-
-- Setores de risco SGB (Polygon/MultiPolygon) na raiz:
-    setor_risco_sgb_leve.geojson  (ou nome parecido; o app resolve por "setor_risco" e "sgb")
-"""
-
 from pathlib import Path
 import base64
 import json
