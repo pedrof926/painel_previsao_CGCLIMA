@@ -71,6 +71,10 @@ def card_resumo(titulo: str, valor: str, detalhe: str = "", cor: str = "#243B53"
 def _get_resumo_para_contexto(resumo: dict, data_iso: str | None, var_key: str | None) -> tuple[dict, bool]:
     """Retorna (resumo_contexto, eh_acumulado).
 
+    Compatível com o JSON gerado pelo script:
+      resumo["datas"][YYYY-MM-DD]
+      resumo["acumulado"]
+
     Se a variável selecionada for precipitação acumulada, usa o bloco acumulado.
     Caso contrário, usa o resumo diário da data selecionada.
     """
@@ -80,7 +84,10 @@ def _get_resumo_para_contexto(resumo: dict, data_iso: str | None, var_key: str |
     if var_key == "prec_acum":
         return resumo.get("acumulado", resumo), True
 
-    diario = resumo.get("diario", {}) or {}
+    # O JSON correto usa a chave "datas".
+    # Mantive fallback para "diario" caso exista alguma versão antiga.
+    diario = resumo.get("datas", {}) or resumo.get("diario", {}) or {}
+
     if data_iso and data_iso in diario:
         return diario[data_iso], False
 
@@ -103,9 +110,20 @@ def montar_cards_resumo(data_iso: str | None = None, var_key: str | None = None)
         detalhe_chuva = "acumulado no Brasil"
         detalhe_temp = "no período, Brasil"
     else:
-        periodo = contexto.get("data") or (formatar_label_br(data_iso) if data_iso else resumo.get("periodo", "Data não informada"))
+        periodo = (
+            contexto.get("data_br")
+            or contexto.get("data")
+            or (formatar_label_br(data_iso) if data_iso else resumo.get("periodo", "Data não informada"))
+        )
         titulo_chuva = "Maior precipitação diária"
-        valor_chuva = _fmt_num(contexto.get("maior_precipitacao_diaria_mm"), 1, " mm")
+
+        # O JSON diário usa "maior_precipitacao_mm".
+        # Mantive fallback para "maior_precipitacao_diaria_mm" se algum JSON antigo tiver essa chave.
+        valor_chuva = _fmt_num(
+            contexto.get("maior_precipitacao_mm", contexto.get("maior_precipitacao_diaria_mm")),
+            1,
+            " mm",
+        )
         detalhe_chuva = "maior valor no Brasil"
         detalhe_temp = "na data selecionada, Brasil"
 
