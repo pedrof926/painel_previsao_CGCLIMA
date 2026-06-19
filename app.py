@@ -19,7 +19,7 @@ RESUMO_SAUDE_PATH = BASE_DIR / "resumo_saude_chuva.json"
 
 # Recorte padrão (igual às figuras)
 # (lon_min, lon_max, lat_min, lat_max)
-EXTENT = (-90, -30, -60, 15)
+EXTENT = (-85, -30, -35, 8)
 
 # ----------------- VARIÁVEIS DISPONÍVEIS (PREVISÃO PNG) ----------------- #
 VAR_OPCOES = {
