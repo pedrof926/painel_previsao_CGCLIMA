@@ -10,7 +10,7 @@ import plotly.graph_objects as go
 
 # ----------------- CONFIGURAÇÕES ----------------- #
 BASE_DIR = Path(__file__).parent
-IMG_DIR = BASE_DIR / "pngs_ecmwf" if (BASE_DIR / "pngs_ecmwf").exists() else BASE_DIR
+IMG_DIR = BASE_DIR
 
 CAMADAS_DIR = BASE_DIR / "camadas_geojson"
 CAMADAS_FALLBACK_DIRS = [CAMADAS_DIR, BASE_DIR]  # procura primeiro na pasta, depois na raiz
@@ -26,7 +26,6 @@ VAR_OPCOES = {
     "tmin": {"label": "Temperatura mínima diária (°C)", "prefix": "ecmwf_tmin_", "usa_data": True},
     "tmax": {"label": "Temperatura máxima diária (°C)", "prefix": "ecmwf_tmax_", "usa_data": True},
     "tmed": {"label": "Temperatura média diária (°C)", "prefix": "ecmwf_tmed_", "usa_data": True},
-    "ur_med": {"label": "Umidade relativa média diária (%)", "prefix": "ecmwf_ur_med_", "usa_data": True},
     "prec_acum": {"label": "Precipitação acumulada no período (mm)", "prefix": "ecmwf_prec_acumulada_", "usa_data": False},
 }
 
@@ -69,38 +68,53 @@ def card_resumo(titulo: str, valor: str, detalhe: str = "", cor: str = "#243B53"
     )
 
 
-def montar_cards_resumo_para(var_key: str = "prec_acum", data_iso: str | None = None):
-    """Monta cards usando resumo_painel.json.
+def _get_resumo_para_contexto(resumo: dict, data_iso: str | None, var_key: str | None) -> tuple[dict, bool]:
+    """Retorna (resumo_contexto, eh_acumulado).
 
-    Se a variável selecionada for precipitação acumulada, mostra o resumo acumulado.
-    Para variáveis diárias, mostra o resumo do dia selecionado.
+    Se a variável selecionada for precipitação acumulada, usa o bloco acumulado.
+    Caso contrário, usa o resumo diário da data selecionada.
     """
-    resumo = carregar_resumo_painel()
-    diario = resumo.get("diario", {}) or {}
-    acumulado = resumo.get("acumulado", {}) or {}
+    if not resumo:
+        return {}, False
 
     if var_key == "prec_acum":
-        periodo = acumulado.get("periodo") or resumo.get("periodo", "Período não informado")
-        return dbc.Row(
-            [
-                dbc.Col(card_resumo("Período da previsão", periodo, resumo.get("recorte", "Brasil")), md=3, sm=6, className="mb-2"),
-                dbc.Col(card_resumo("Maior precipitação acumulada", _fmt_num(acumulado.get("maior_precipitacao_mm", resumo.get("maior_precipitacao_mm")), 1, " mm"), "recorte Brasil"), md=3, sm=6, className="mb-2"),
-                dbc.Col(card_resumo("Maior temperatura máxima", _fmt_num(resumo.get("maior_tmax_c"), 1, " °C"), "no período / Brasil"), md=3, sm=6, className="mb-2"),
-                dbc.Col(card_resumo("Menor temperatura mínima", _fmt_num(resumo.get("menor_tmin_c"), 1, " °C"), "no período / Brasil"), md=3, sm=6, className="mb-2"),
-            ],
-            className="mb-3",
-        )
+        return resumo.get("acumulado", resumo), True
 
-    data = data_iso or (sorted(diario.keys())[-1] if diario else None)
-    dados = diario.get(data, {}) if data else {}
-    data_label = formatar_label_br(data) if data and "-" in data else (data or "—")
+    diario = resumo.get("diario", {}) or {}
+    if data_iso and data_iso in diario:
+        return diario[data_iso], False
+
+    # fallback: primeira data disponível
+    if diario:
+        primeira = sorted(diario.keys())[0]
+        return diario[primeira], False
+
+    return resumo, False
+
+
+def montar_cards_resumo(data_iso: str | None = None, var_key: str | None = None):
+    resumo = carregar_resumo_painel()
+    contexto, eh_acumulado = _get_resumo_para_contexto(resumo, data_iso, var_key)
+
+    if eh_acumulado:
+        periodo = contexto.get("periodo") or resumo.get("periodo", "Período não informado")
+        titulo_chuva = "Maior precipitação acumulada"
+        valor_chuva = _fmt_num(contexto.get("maior_precipitacao_mm"), 1, " mm")
+        detalhe_chuva = "acumulado no Brasil"
+        detalhe_temp = "no período, Brasil"
+    else:
+        periodo = contexto.get("data") or (formatar_label_br(data_iso) if data_iso else resumo.get("periodo", "Data não informada"))
+        titulo_chuva = "Maior precipitação diária"
+        valor_chuva = _fmt_num(contexto.get("maior_precipitacao_diaria_mm"), 1, " mm")
+        detalhe_chuva = "maior valor no Brasil"
+        detalhe_temp = "na data selecionada, Brasil"
 
     return dbc.Row(
         [
-            dbc.Col(card_resumo("Data da previsão", data_label, resumo.get("recorte", "Brasil")), md=3, sm=6, className="mb-2"),
-            dbc.Col(card_resumo("Maior precipitação diária", _fmt_num(dados.get("maior_precipitacao_mm"), 1, " mm"), "dia civil / Brasil"), md=3, sm=6, className="mb-2"),
-            dbc.Col(card_resumo("Maior temperatura máxima", _fmt_num(dados.get("maior_tmax_c"), 1, " °C"), "no dia / Brasil"), md=3, sm=6, className="mb-2"),
-            dbc.Col(card_resumo("Umidade relativa média", _fmt_num(dados.get("umidade_media_brasil_pct"), 1, "%"), "média espacial no Brasil"), md=3, sm=6, className="mb-2"),
+            dbc.Col(card_resumo("Referência", periodo, "Brasil"), md=3, sm=6, className="mb-2"),
+            dbc.Col(card_resumo(titulo_chuva, valor_chuva, detalhe_chuva), md=3, sm=6, className="mb-2"),
+            dbc.Col(card_resumo("Maior temperatura máxima", _fmt_num(contexto.get("maior_tmax_c"), 1, " °C"), detalhe_temp), md=3, sm=6, className="mb-2"),
+            dbc.Col(card_resumo("Menor temperatura mínima", _fmt_num(contexto.get("menor_tmin_c"), 1, " °C"), detalhe_temp), md=3, sm=6, className="mb-2"),
         ],
         className="mb-3",
     )
@@ -768,7 +782,7 @@ app.layout = dbc.Container(
             style={"borderBottom": "1px solid #e7edf3"},
         ),
 
-        html.Div(id="cards-resumo-container", children=montar_cards_resumo_para("prec_acum", DATA_DEFAULT)),
+        html.Div(id="cards-resumo", children=montar_cards_resumo(DATA_DEFAULT, "prec_acum")),
 
         dbc.Row(
             [
@@ -894,14 +908,13 @@ app.layout = dbc.Container(
 )
 
 # ----------------- CALLBACKS ----------------- #
-
 @app.callback(
-    Output("cards-resumo-container", "children"),
+    Output("cards-resumo", "children"),
     Input("dropdown-data", "value"),
     Input("radio-var", "value"),
 )
 def atualizar_cards_resumo(data_iso, var_key):
-    return montar_cards_resumo_para(var_key or "prec_acum", data_iso)
+    return montar_cards_resumo(data_iso, var_key)
 
 @app.callback(
     Output("graph-mapa", "figure"),
