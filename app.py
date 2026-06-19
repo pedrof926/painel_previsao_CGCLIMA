@@ -15,6 +15,7 @@ IMG_DIR = BASE_DIR
 CAMADAS_DIR = BASE_DIR / "camadas_geojson"
 CAMADAS_FALLBACK_DIRS = [CAMADAS_DIR, BASE_DIR]  # procura primeiro na pasta, depois na raiz
 RESUMO_PATH = BASE_DIR / "resumo_painel.json"
+RESUMO_SAUDE_PATH = BASE_DIR / "resumo_saude_chuva.json"
 
 # Recorte padrão (igual às figuras)
 # (lon_min, lon_max, lat_min, lat_max)
@@ -136,6 +137,121 @@ def montar_cards_resumo(data_iso: str | None = None, var_key: str | None = None)
         ],
         className="mb-3",
     )
+
+
+# ----------------- HELPERS (SAÚDE + CHUVA) ----------------- #
+def carregar_resumo_saude() -> dict:
+    """Carrega resumo_saude_chuva.json gerado na etapa de processamento."""
+    if not RESUMO_SAUDE_PATH.exists():
+        return {}
+    try:
+        with open(RESUMO_SAUDE_PATH, "r", encoding="utf-8") as f:
+            return json.load(f)
+    except Exception as e:
+        print(f"⚠️ Não consegui carregar {RESUMO_SAUDE_PATH.name}: {repr(e)}")
+        return {}
+
+
+def _get_saude_contexto(resumo: dict, data_iso: str | None, var_key: str | None) -> tuple[dict, bool]:
+    if not resumo:
+        return {}, False
+
+    if var_key == "prec_acum":
+        return resumo.get("acumulado", {}), True
+
+    datas = resumo.get("datas", {}) or {}
+    if data_iso and data_iso in datas:
+        return datas[data_iso], False
+
+    if datas:
+        primeira = sorted(datas.keys())[0]
+        return datas[primeira], False
+
+    return {}, False
+
+
+def _contagem_tipo(ctx: dict, tipo: str, campo: str) -> int:
+    try:
+        return int(((ctx.get("por_tipo", {}) or {}).get(tipo, {}) or {}).get(campo, 0))
+    except Exception:
+        return 0
+
+
+def _total_saude(ctx: dict, campo: str) -> int:
+    try:
+        return int((ctx.get("totais", {}) or {}).get(campo, 0))
+    except Exception:
+        return 0
+
+
+def card_saude(titulo: str, valor: str, detalhe: str = "", cor: str = "#243B53"):
+    return dbc.Card(
+        dbc.CardBody([
+            html.Div(titulo, style={"fontSize": "0.78rem", "color": "#5b677a", "fontWeight": "600"}),
+            html.Div(valor, style={"fontSize": "1.35rem", "fontWeight": "800", "color": cor, "lineHeight": "1.2"}),
+            html.Div(detalhe, style={"fontSize": "0.75rem", "color": "#6c757d"}) if detalhe else None,
+        ]),
+        className="shadow-sm h-100",
+        style={"border": "1px solid #e7edf3", "borderRadius": "14px"},
+    )
+
+
+def montar_cards_saude(data_iso: str | None = None, var_key: str | None = None):
+    resumo = carregar_resumo_saude()
+    ctx, eh_acumulado = _get_saude_contexto(resumo, data_iso, var_key)
+
+    if not ctx:
+        return html.Div(
+            "Resumo saúde/chuva ainda não disponível. Gere e suba o arquivo resumo_saude_chuva.json.",
+            className="text-muted mb-3",
+            style={"fontSize": "0.9rem"},
+        )
+
+    if eh_acumulado:
+        criterio = resumo.get("criterio_acumulado", {})
+        limiar_alerta = criterio.get("alerta_mm", 150)
+        titulo_base = f"chuva acumulada ≥ {limiar_alerta} mm"
+        campo_chuva = "chuva_alerta"
+        detalhe_periodo = "período acumulado"
+    else:
+        criterio = resumo.get("criterio_diario", {})
+        limiar_alerta = criterio.get("alerta_mm", 50)
+        titulo_base = f"chuva diária ≥ {limiar_alerta} mm"
+        campo_chuva = "chuva_alerta"
+        detalhe_periodo = "data selecionada"
+
+    upa = _contagem_tipo(ctx, "upa", campo_chuva)
+    ubs = _contagem_tipo(ctx, "ubs", campo_chuva)
+    ubsi = _contagem_tipo(ctx, "ubsi", campo_chuva)
+    muito_alto = _total_saude(ctx, "chuva_alerta_e_sgb")
+    texto = ctx.get("texto_saude", "")
+
+    return dbc.Card(
+        dbc.CardBody([
+            html.Div(
+                [
+                    html.H5("Indicadores de exposição da rede de saúde", className="mb-1", style={"fontWeight": "800", "color": "#102A43"}),
+                    html.Div(texto, className="text-muted mb-3", style={"fontSize": "0.9rem"}),
+                ]
+            ),
+            dbc.Row(
+                [
+                    dbc.Col(card_saude("UPAs expostas", str(upa), titulo_base), md=3, sm=6, className="mb-2"),
+                    dbc.Col(card_saude("UBS expostas", str(ubs), titulo_base), md=3, sm=6, className="mb-2"),
+                    dbc.Col(card_saude("UBSI expostas", str(ubsi), titulo_base), md=3, sm=6, className="mb-2"),
+                    dbc.Col(card_saude("Atenção muito alta", str(muito_alto), f"{titulo_base} + SGB Alto/Muito alto", "#8A1C1C"), md=3, sm=6, className="mb-2"),
+                ],
+                className="mb-1",
+            ),
+            html.Small(
+                f"Critério referente ao {detalhe_periodo}. Para acumulado, os limiares são diferentes dos limiares diários.",
+                className="text-muted",
+            ),
+        ]),
+        className="shadow-sm mb-3",
+        style={"border": "1px solid #e7edf3", "borderRadius": "14px"},
+    )
+
 
 # ----------------- HELPERS (PNG) ----------------- #
 def listar_datas_disponiveis():
@@ -915,6 +1031,8 @@ app.layout = dbc.Container(
             className="mb-3",
         ),
 
+        html.Div(id="cards-saude", children=montar_cards_saude(DATA_DEFAULT, "prec_acum")),
+
         html.Footer(
             "Fonte: ECMWF Open Data – processamento local CGCLIMA/SSCLIMA.",
             className="text-muted mt-2 mb-2",
@@ -933,6 +1051,15 @@ app.layout = dbc.Container(
 )
 def atualizar_cards_resumo(data_iso, var_key):
     return montar_cards_resumo(data_iso, var_key)
+
+
+@app.callback(
+    Output("cards-saude", "children"),
+    Input("dropdown-data", "value"),
+    Input("radio-var", "value"),
+)
+def atualizar_cards_saude(data_iso, var_key):
+    return montar_cards_saude(data_iso, var_key)
 
 @app.callback(
     Output("graph-mapa", "figure"),
