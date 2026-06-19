@@ -14,6 +14,7 @@ IMG_DIR = BASE_DIR
 
 CAMADAS_DIR = BASE_DIR / "camadas_geojson"
 CAMADAS_FALLBACK_DIRS = [CAMADAS_DIR, BASE_DIR]  # procura primeiro na pasta, depois na raiz
+RESUMO_PATH = BASE_DIR / "resumo_painel.json"
 
 # Recorte padrão (igual às figuras)
 # (lon_min, lon_max, lat_min, lat_max)
@@ -27,6 +28,58 @@ VAR_OPCOES = {
     "tmed": {"label": "Temperatura média diária (°C)", "prefix": "ecmwf_tmed_", "usa_data": True},
     "prec_acum": {"label": "Precipitação acumulada no período (mm)", "prefix": "ecmwf_prec_acumulada_", "usa_data": False},
 }
+
+
+# ----------------- HELPERS (RESUMO / CARDS) ----------------- #
+def carregar_resumo_painel() -> dict:
+    """Carrega resumo_painel.json gerado na etapa de processamento."""
+    if not RESUMO_PATH.exists():
+        return {}
+    try:
+        with open(RESUMO_PATH, "r", encoding="utf-8") as f:
+            return json.load(f)
+    except Exception as e:
+        print(f"⚠️ Não consegui carregar {RESUMO_PATH.name}: {repr(e)}")
+        return {}
+
+
+def _fmt_num(valor, casas=1, sufixo="") -> str:
+    if valor is None or valor == "":
+        return "—"
+    try:
+        v = float(valor)
+        txt = f"{v:.{casas}f}".replace(".", ",")
+        if casas == 0:
+            txt = str(int(round(v)))
+        return f"{txt}{sufixo}"
+    except Exception:
+        return str(valor)
+
+
+def card_resumo(titulo: str, valor: str, detalhe: str = "", cor: str = "#243B53"):
+    return dbc.Card(
+        dbc.CardBody([
+            html.Div(titulo, style={"fontSize": "0.78rem", "color": "#5b677a", "fontWeight": "600"}),
+            html.Div(valor, style={"fontSize": "1.45rem", "fontWeight": "800", "color": cor, "lineHeight": "1.2"}),
+            html.Div(detalhe, style={"fontSize": "0.75rem", "color": "#6c757d"}) if detalhe else None,
+        ]),
+        className="shadow-sm h-100",
+        style={"border": "1px solid #e7edf3", "borderRadius": "14px"},
+    )
+
+
+def montar_cards_resumo():
+    resumo = carregar_resumo_painel()
+    periodo = resumo.get("periodo", "Período não informado")
+    return dbc.Row(
+        [
+            dbc.Col(card_resumo("Período da previsão", periodo, "ECMWF HRES"), md=3, sm=6, className="mb-2"),
+            dbc.Col(card_resumo("Maior precipitação acumulada", _fmt_num(resumo.get("maior_precipitacao_mm"), 1, " mm"), "maior valor na grade"), md=3, sm=6, className="mb-2"),
+            dbc.Col(card_resumo("Maior temperatura máxima", _fmt_num(resumo.get("maior_tmax_c"), 1, " °C"), "no período"), md=3, sm=6, className="mb-2"),
+            dbc.Col(card_resumo("Menor temperatura mínima", _fmt_num(resumo.get("menor_tmin_c"), 1, " °C"), "no período"), md=3, sm=6, className="mb-2"),
+        ],
+        className="mb-3",
+    )
 
 # ----------------- HELPERS (PNG) ----------------- #
 def listar_datas_disponiveis():
@@ -659,131 +712,161 @@ app.title = "Previsão ECMWF - Painel de Mapas"
 
 app.layout = dbc.Container(
     [
-        html.H2(
-            "Painel de Monitoramento Meteorológico - CGCLIMA/SSCLIMA",
-            className="mt-3 mb-2",
-            style={"textAlign": "center"},
+        dbc.Row(
+            [
+                dbc.Col(
+                    [
+                        html.Div("CGCLIMA/SSCLIMA", style={"fontSize": "0.82rem", "fontWeight": "700", "letterSpacing": "0.04em", "color": "#52616B"}),
+                        html.H2(
+                            "Painel de Monitoramento Meteorológico para Saúde",
+                            className="mb-1",
+                            style={"fontWeight": "800", "color": "#102A43"},
+                        ),
+                        html.Div(
+                            "Previsão meteorológica integrada a unidades de saúde e setores de risco.",
+                            style={"color": "#334E68", "fontSize": "1rem"},
+                        ),
+                    ],
+                    md=9,
+                ),
+                dbc.Col(
+                    html.Div(
+                        [
+                            html.Div("Última atualização", style={"fontSize": "0.75rem", "color": "#6c757d"}),
+                            html.Div(carregar_resumo_painel().get("data_atualizacao", "—"), style={"fontWeight": "700", "color": "#102A43"}),
+                        ],
+                        className="text-md-end mt-2 mt-md-0",
+                    ),
+                    md=3,
+                ),
+            ],
+            className="align-items-center mt-3 mb-3 pb-3",
+            style={"borderBottom": "1px solid #e7edf3"},
         ),
-        html.Div(
-            "Visualização da previsão meteorológica.",
-            className="mb-3",
-            style={"textAlign": "center"},
-        ),
+
+        montar_cards_resumo(),
 
         dbc.Row(
             [
                 dbc.Col(
                     [
-                        html.H5("Campos de seleção", className="mb-3"),
+                        dbc.Card(
+                            dbc.CardBody([
+                                html.H5("Configuração da visualização", className="mb-3", style={"fontWeight": "700"}),
 
-                        html.Label("Variável Meteorológica:", className="fw-bold"),
-                        dcc.RadioItems(
-                            id="radio-var",
-                            options=[{"label": v["label"], "value": k} for k, v in VAR_OPCOES.items()],
-                            value="prec",
-                            labelStyle={"display": "block"},
-                            className="mb-3",
-                        ),
+                                html.Label("Variável meteorológica", className="fw-bold"),
+                                dcc.RadioItems(
+                                    id="radio-var",
+                                    options=[{"label": v["label"], "value": k} for k, v in VAR_OPCOES.items()],
+                                    value="prec_acum",
+                                    labelStyle={"display": "block", "marginBottom": "0.35rem"},
+                                    className="mb-3",
+                                ),
 
-                        html.Label("Data da previsão:", className="fw-bold"),
-                        dcc.Dropdown(
-                            id="dropdown-data",
-                            options=[{"label": formatar_label_br(d), "value": d} for d in DATAS],
-                            value=DATA_DEFAULT,
-                            clearable=False,
-                            className="mb-3",
-                        ),
+                                html.Label("Data da previsão", className="fw-bold"),
+                                dcc.Dropdown(
+                                    id="dropdown-data",
+                                    options=[{"label": formatar_label_br(d), "value": d} for d in DATAS],
+                                    value=DATA_DEFAULT,
+                                    clearable=False,
+                                    className="mb-3",
+                                ),
 
-                        html.Label("Modo de visualização:", className="fw-bold"),
-                        dcc.RadioItems(
-                            id="radio-modo",
-                            options=[
-                                {"label": "Mapa diário", "value": "dia"},
-                                {"label": "Animação (todos os dias)", "value": "anim"},
-                            ],
-                            value="dia",
-                            labelStyle={"display": "block"},
-                            className="mb-2",
-                        ),
-                        html.Small(
-                            "O modo animação não se aplica à precipitação acumulada, nesse caso, a previsão é estática.",
-                            className="text-muted",
-                        ),
+                                html.Label("Modo da figura estática", className="fw-bold"),
+                                dcc.RadioItems(
+                                    id="radio-modo",
+                                    options=[
+                                        {"label": "Mapa diário", "value": "dia"},
+                                        {"label": "Animação (todos os dias)", "value": "anim"},
+                                    ],
+                                    value="dia",
+                                    labelStyle={"display": "block", "marginBottom": "0.35rem"},
+                                    className="mb-2",
+                                ),
+                                html.Small(
+                                    "A animação não se aplica à precipitação acumulada.",
+                                    className="text-muted",
+                                ),
 
-                        html.Hr(),
+                                html.Hr(),
 
-                        html.Label("Unidades de Saúde:", className="fw-bold"),
-                        dcc.Dropdown(
-                            id="dropdown-unidades",
-                            options=[
-                                {"label": "UPA", "value": "upa"},
-                                {"label": "UBS", "value": "ubs"},
-                                {"label": "UBSI", "value": "ubsi"},
-                            ],
-                            value="upa",
-                            clearable=False,
-                            className="mb-2",
-                        ),
+                                html.Label("Unidades de saúde", className="fw-bold"),
+                                dcc.Dropdown(
+                                    id="dropdown-unidades",
+                                    options=[
+                                        {"label": "UPA", "value": "upa"},
+                                        {"label": "UBS", "value": "ubs"},
+                                        {"label": "UBSI", "value": "ubsi"},
+                                    ],
+                                    value="upa",
+                                    clearable=False,
+                                    className="mb-3",
+                                ),
 
-                        html.Hr(),
-
-                        html.Label("Camadas de Sobreposição:", className="fw-bold"),
-                        dcc.Checklist(
-                            id="check-overlay",
-                            options=[
-                                {"label": "Previsão", "value": "prev"},
-                                {"label": "Unidades de Saúde", "value": "uni"},
-                                {"label": "Setores de Risco (SGB)", "value": "sgb"},
-                            ],
-                            value=["prev", "uni", "sgb"],
-                            labelStyle={"display": "block"},
-                            className="mb-2",
-                        ),
-                        html.Small(
-                            "As camadas foram elaboradas utilizando arquivos em modo GeoJSON",
-                            className="text-muted",
-                        ),
+                                html.Label("Informações complementares", className="fw-bold"),
+                                dcc.Checklist(
+                                    id="check-overlay",
+                                    options=[
+                                        {"label": "Previsão", "value": "prev"},
+                                        {"label": "Unidades de saúde", "value": "uni"},
+                                        {"label": "Setores de risco (SGB)", "value": "sgb"},
+                                    ],
+                                    value=["prev", "uni", "sgb"],
+                                    labelStyle={"display": "block", "marginBottom": "0.35rem"},
+                                    className="mb-2",
+                                ),
+                                html.Small(
+                                    "Camadas elaboradas em formato GeoJSON.",
+                                    className="text-muted",
+                                ),
+                            ]),
+                            className="shadow-sm",
+                            style={"border": "1px solid #e7edf3", "borderRadius": "14px"},
+                        )
                     ],
                     md=3, lg=3, xl=3,
                 ),
 
                 dbc.Col(
                     [
-                        dcc.Graph(
-                            id="graph-mapa",
-                            style={"height": "75vh"},
-                            config={"scrollZoom": True, "displayModeBar": False},
+                        dbc.Tabs(
+                            [
+                                dbc.Tab(
+                                    dcc.Graph(
+                                        id="graph-overlay",
+                                        style={"height": "78vh"},
+                                        config={"scrollZoom": True, "displayModeBar": False},
+                                    ),
+                                    label="Mapa integrado",
+                                    tab_id="tab-overlay",
+                                ),
+                                dbc.Tab(
+                                    dcc.Graph(
+                                        id="graph-mapa",
+                                        style={"height": "78vh"},
+                                        config={"scrollZoom": True, "displayModeBar": False},
+                                    ),
+                                    label="Figura meteorológica",
+                                    tab_id="tab-figura",
+                                ),
+                            ],
+                            active_tab="tab-overlay",
                         )
                     ],
                     md=9, lg=9, xl=9,
                 ),
             ],
-            className="mb-2",
-        ),
-
-        dbc.Row(
-            [
-                dbc.Col(
-                    [
-                        dcc.Graph(
-                            id="graph-overlay",
-                            style={"height": "65vh"},
-                            config={"scrollZoom": True, "displayModeBar": False},
-                        )
-                    ]
-                )
-            ],
             className="mb-3",
         ),
 
-        html.Hr(),
         html.Footer(
-            "Fonte: ECMWF Open Data – Processamento local (Pedro)",
-            className="text-muted mt-1 mb-2",
+            "Fonte: ECMWF Open Data – processamento local CGCLIMA/SSCLIMA.",
+            className="text-muted mt-2 mb-2",
             style={"fontSize": "0.85rem"},
         ),
     ],
     fluid=True,
+    style={"backgroundColor": "#f8fafc", "minHeight": "100vh"},
 )
 
 # ----------------- CALLBACKS ----------------- #
