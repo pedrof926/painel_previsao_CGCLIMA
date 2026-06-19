@@ -675,7 +675,7 @@ def construir_mapa_sobreposicao(var_key: str, data_iso: str | None, camada_unida
         mapbox=dict(
             style="open-street-map",
             center=dict(lat=center_lat, lon=center_lon),
-            zoom=2.0,
+            zoom=2.8,
             bounds=dict(west=lon_min, east=lon_max, south=lat_min, north=lat_max),
             layers=[],
         ),
