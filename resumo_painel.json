@@ -1,70 +1,70 @@
 {
-  "data_atualizacao": "21/07/2026 09:25",
+  "data_atualizacao": "22/07/2026 16:22",
   "fonte": "ECMWF HRES",
   "recorte": "Brasil",
-  "periodo": "22/07/2026 a 27/07/2026",
+  "periodo": "23/07/2026 a 28/07/2026",
   "datas": {
-    "2026-07-22": {
-      "data": "2026-07-22",
-      "data_br": "22/07/2026",
-      "maior_precipitacao_mm": 115.5,
-      "maior_tmax_c": 36.1,
-      "menor_tmin_c": 7.0,
-      "maior_tmed_c": 30.5,
-      "media_precipitacao_mm": 3.1
-    },
     "2026-07-23": {
       "data": "2026-07-23",
       "data_br": "23/07/2026",
-      "maior_precipitacao_mm": 69.8,
-      "maior_tmax_c": 36.3,
-      "menor_tmin_c": 9.3,
-      "maior_tmed_c": 31.0,
-      "media_precipitacao_mm": 3.4
+      "maior_precipitacao_mm": 92.7,
+      "maior_tmax_c": 36.6,
+      "menor_tmin_c": 8.6,
+      "maior_tmed_c": 30.8,
+      "media_precipitacao_mm": 3.3
     },
     "2026-07-24": {
       "data": "2026-07-24",
       "data_br": "24/07/2026",
-      "maior_precipitacao_mm": 69.5,
-      "maior_tmax_c": 37.1,
-      "menor_tmin_c": 7.1,
-      "maior_tmed_c": 31.3,
-      "media_precipitacao_mm": 1.8
+      "maior_precipitacao_mm": 56.0,
+      "maior_tmax_c": 36.9,
+      "menor_tmin_c": 8.2,
+      "maior_tmed_c": 31.1,
+      "media_precipitacao_mm": 1.5
     },
     "2026-07-25": {
       "data": "2026-07-25",
       "data_br": "25/07/2026",
-      "maior_precipitacao_mm": 125.7,
-      "maior_tmax_c": 37.1,
-      "menor_tmin_c": 6.3,
-      "maior_tmed_c": 31.2,
-      "media_precipitacao_mm": 2.9
+      "maior_precipitacao_mm": 54.4,
+      "maior_tmax_c": 37.5,
+      "menor_tmin_c": 6.8,
+      "maior_tmed_c": 31.4,
+      "media_precipitacao_mm": 2.5
     },
     "2026-07-26": {
       "data": "2026-07-26",
       "data_br": "26/07/2026",
-      "maior_precipitacao_mm": 69.4,
-      "maior_tmax_c": 38.3,
-      "menor_tmin_c": 5.5,
-      "maior_tmed_c": 31.2,
-      "media_precipitacao_mm": 3.4
+      "maior_precipitacao_mm": 64.6,
+      "maior_tmax_c": 38.0,
+      "menor_tmin_c": 6.7,
+      "maior_tmed_c": 31.4,
+      "media_precipitacao_mm": 2.8
     },
     "2026-07-27": {
       "data": "2026-07-27",
       "data_br": "27/07/2026",
-      "maior_precipitacao_mm": 29.7,
-      "maior_tmax_c": 38.0,
-      "menor_tmin_c": 2.4,
-      "maior_tmed_c": 31.2,
+      "maior_precipitacao_mm": 44.7,
+      "maior_tmax_c": 38.3,
+      "menor_tmin_c": 6.4,
+      "maior_tmed_c": 30.9,
       "media_precipitacao_mm": 1.4
+    },
+    "2026-07-28": {
+      "data": "2026-07-28",
+      "data_br": "28/07/2026",
+      "maior_precipitacao_mm": 67.2,
+      "maior_tmax_c": 38.2,
+      "menor_tmin_c": 10.2,
+      "maior_tmed_c": 31.3,
+      "media_precipitacao_mm": 1.8
     }
   },
   "acumulado": {
-    "periodo": "22/07/2026 a 27/07/2026",
-    "maior_precipitacao_mm": 187.1,
+    "periodo": "23/07/2026 a 28/07/2026",
+    "maior_precipitacao_mm": 109.0,
     "maior_tmax_c": 38.3,
-    "menor_tmin_c": 2.4,
-    "maior_tmed_c": 31.3,
-    "media_precipitacao_mm": 16.0
+    "menor_tmin_c": 6.4,
+    "maior_tmed_c": 31.4,
+    "media_precipitacao_mm": 13.2
   }
 }
