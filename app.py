@@ -253,6 +253,150 @@ def montar_cards_saude(data_iso: str | None = None, var_key: str | None = None):
     )
 
 
+def _todas_unidades_expostas(ctx: dict) -> list[dict]:
+    bloco = ctx.get("unidades_expostas", {}) or {}
+    unidades = []
+
+    for tipo in ["upa", "ubs", "ubsi"]:
+        for item in bloco.get(tipo, []) or []:
+            registro = dict(item)
+            registro["tipo_unidade"] = str(registro.get("tipo_unidade") or tipo).lower()
+            unidades.append(registro)
+
+    return unidades
+
+
+def _label_unidade_exposta(item: dict) -> str:
+    tipo = str(item.get("tipo_unidade", "")).upper()
+    nome = str(item.get("nome", "")).strip() or "Unidade sem nome"
+    municipio = str(item.get("municipio", "")).strip()
+    uf = str(item.get("uf", "")).strip()
+
+    local = municipio
+    if municipio and uf and not municipio.upper().endswith(f"/{uf.upper()}"):
+        local = f"{municipio}/{uf}"
+    elif not municipio and uf:
+        local = uf
+
+    return f"{tipo} — {nome} — {local}" if local else f"{tipo} — {nome}"
+
+
+def _buscar_unidade_exposta(ctx: dict, id_unidade: str | None) -> dict | None:
+    if not id_unidade:
+        return None
+
+    for item in _todas_unidades_expostas(ctx):
+        if str(item.get("id_unidade", "")) == str(id_unidade):
+            return item
+
+    return None
+
+
+def montar_detalhe_unidade_exposta(item: dict | None, var_key: str | None = None):
+    if not item:
+        return html.Div(
+            "Selecione uma unidade para visualizar os detalhes.",
+            className="text-muted",
+            style={"fontSize": "0.9rem"},
+        )
+
+    tipo = str(item.get("tipo_unidade", "")).upper() or "—"
+    nome = str(item.get("nome", "")).strip() or "Unidade sem nome"
+    cnes = str(item.get("cnes", "")).strip() or "Não informado"
+    cd_mun = str(item.get("cd_mun", "")).strip() or "Não informado"
+    municipio = str(item.get("municipio", "")).strip()
+    uf = str(item.get("uf", "")).strip()
+
+    if municipio and uf and not municipio.upper().endswith(f"/{uf.upper()}"):
+        municipio_fmt = f"{municipio}/{uf}"
+    elif municipio:
+        municipio_fmt = municipio
+    elif uf:
+        municipio_fmt = uf
+    else:
+        municipio_fmt = "Não informado"
+
+    precipitacao = _fmt_num(item.get("precipitacao_mm"), 1, " mm")
+    classificacao = str(item.get("atencao_saude", "")).strip() or "—"
+    sgb = str(item.get("sgb_risco", "")).strip() or "Fora/sem SGB"
+    lat = item.get("lat")
+    lon = item.get("lon")
+    rotulo_prec = "Precipitação acumulada prevista" if var_key == "prec_acum" else "Precipitação diária prevista"
+
+    return dbc.Card(
+        dbc.CardBody([
+            html.H5(nome, className="mb-3", style={"fontWeight": "800", "color": "#102A43"}),
+            dbc.Row([
+                dbc.Col([html.Small("Tipo", className="text-muted"), html.Div(tipo, className="fw-bold")], md=3, sm=6, className="mb-2"),
+                dbc.Col([html.Small("CNES", className="text-muted"), html.Div(cnes, className="fw-bold")], md=3, sm=6, className="mb-2"),
+                dbc.Col([html.Small("Município", className="text-muted"), html.Div(municipio_fmt, className="fw-bold")], md=3, sm=6, className="mb-2"),
+                dbc.Col([html.Small("Código municipal", className="text-muted"), html.Div(cd_mun, className="fw-bold")], md=3, sm=6, className="mb-2"),
+            ]),
+            dbc.Row([
+                dbc.Col([html.Small(rotulo_prec, className="text-muted"), html.Div(precipitacao, className="fw-bold")], md=4, sm=6, className="mb-2"),
+                dbc.Col([html.Small("Classificação", className="text-muted"), html.Div(classificacao, className="fw-bold")], md=4, sm=6, className="mb-2"),
+                dbc.Col([html.Small("SGB", className="text-muted"), html.Div(sgb, className="fw-bold")], md=4, sm=6, className="mb-2"),
+            ]),
+            html.Small(
+                f"Coordenadas: {lat}, {lon}",
+                className="text-muted",
+            ),
+        ]),
+        className="mt-3",
+        style={"border": "1px solid #e7edf3", "borderRadius": "12px", "backgroundColor": "#fbfdff"},
+    )
+
+
+def montar_bloco_unidades_expostas(data_iso: str | None = None, var_key: str | None = None):
+    resumo = carregar_resumo_saude()
+    ctx, _ = _get_saude_contexto(resumo, data_iso, var_key)
+    total = len(_todas_unidades_expostas(ctx)) if ctx else 0
+
+    return dbc.Card(
+        dbc.CardBody([
+            html.Div([
+                html.H5("Unidades de saúde expostas", className="mb-1", style={"fontWeight": "800", "color": "#102A43"}),
+                html.Div(
+                    f"{total} unidade(s) identificada(s) no critério de alerta do contexto selecionado.",
+                    id="texto-total-unidades-expostas",
+                    className="text-muted mb-3",
+                    style={"fontSize": "0.9rem"},
+                ),
+            ]),
+            dbc.Row([
+                dbc.Col([
+                    html.Label("Tipo de unidade", className="fw-bold"),
+                    dcc.Dropdown(
+                        id="dropdown-tipo-unidade-exposta",
+                        options=[
+                            {"label": "Todas", "value": "todas"},
+                            {"label": "UPA", "value": "upa"},
+                            {"label": "UBS", "value": "ubs"},
+                            {"label": "UBSI", "value": "ubsi"},
+                        ],
+                        value="todas",
+                        clearable=False,
+                    ),
+                ], md=3, className="mb-2"),
+                dbc.Col([
+                    html.Label("Unidade", className="fw-bold"),
+                    dcc.Dropdown(
+                        id="dropdown-unidade-exposta",
+                        options=[],
+                        value=None,
+                        placeholder="Selecione ou digite o nome da unidade...",
+                        searchable=True,
+                        clearable=True,
+                    ),
+                ], md=9, className="mb-2"),
+            ]),
+            html.Div(id="detalhe-unidade-exposta", children=montar_detalhe_unidade_exposta(None, var_key)),
+        ]),
+        className="shadow-sm mb-3",
+        style={"border": "1px solid #e7edf3", "borderRadius": "14px"},
+    )
+
+
 # ----------------- HELPERS (PNG) ----------------- #
 def listar_datas_disponiveis():
     datas = set()
@@ -1033,6 +1177,11 @@ app.layout = dbc.Container(
 
         html.Div(id="cards-saude", children=montar_cards_saude(DATA_DEFAULT, "prec_acum")),
 
+        html.Div(
+            id="bloco-unidades-expostas",
+            children=montar_bloco_unidades_expostas(DATA_DEFAULT, "prec_acum"),
+        ),
+
         html.Footer(
             "Fonte: ECMWF Open Data – processamento local CGCLIMA/SSCLIMA.",
             className="text-muted mt-2 mb-2",
@@ -1060,6 +1209,72 @@ def atualizar_cards_resumo(data_iso, var_key):
 )
 def atualizar_cards_saude(data_iso, var_key):
     return montar_cards_saude(data_iso, var_key)
+
+
+@app.callback(
+    Output("texto-total-unidades-expostas", "children"),
+    Input("dropdown-data", "value"),
+    Input("radio-var", "value"),
+)
+def atualizar_total_unidades_expostas(data_iso, var_key):
+    resumo = carregar_resumo_saude()
+    ctx, _ = _get_saude_contexto(resumo, data_iso, var_key)
+    total = len(_todas_unidades_expostas(ctx)) if ctx else 0
+    return f"{total} unidade(s) identificada(s) no critério de alerta do contexto selecionado."
+
+
+@app.callback(
+    Output("dropdown-unidade-exposta", "options"),
+    Output("dropdown-unidade-exposta", "value"),
+    Input("dropdown-data", "value"),
+    Input("radio-var", "value"),
+    Input("dropdown-tipo-unidade-exposta", "value"),
+)
+def atualizar_dropdown_unidades_expostas(data_iso, var_key, tipo_unidade):
+    resumo = carregar_resumo_saude()
+    ctx, _ = _get_saude_contexto(resumo, data_iso, var_key)
+
+    if not ctx:
+        return [], None
+
+    unidades = _todas_unidades_expostas(ctx)
+
+    if tipo_unidade and tipo_unidade != "todas":
+        unidades = [u for u in unidades if u.get("tipo_unidade") == tipo_unidade]
+
+    unidades = sorted(
+        unidades,
+        key=lambda u: (
+            str(u.get("tipo_unidade", "")),
+            str(u.get("municipio", "")),
+            str(u.get("nome", "")),
+        ),
+    )
+
+    options = [
+        {
+            "label": _label_unidade_exposta(u),
+            "value": u.get("id_unidade"),
+        }
+        for u in unidades
+        if u.get("id_unidade")
+    ]
+
+    return options, None
+
+
+@app.callback(
+    Output("detalhe-unidade-exposta", "children"),
+    Input("dropdown-unidade-exposta", "value"),
+    Input("dropdown-data", "value"),
+    Input("radio-var", "value"),
+)
+def atualizar_detalhe_unidade_exposta(id_unidade, data_iso, var_key):
+    resumo = carregar_resumo_saude()
+    ctx, _ = _get_saude_contexto(resumo, data_iso, var_key)
+    item = _buscar_unidade_exposta(ctx, id_unidade) if ctx else None
+    return montar_detalhe_unidade_exposta(item, var_key)
+
 
 @app.callback(
     Output("graph-mapa", "figure"),
