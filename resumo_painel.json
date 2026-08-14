@@ -1,5 +1,5 @@
 {
-  "data_atualizacao": "14/08/2026 06:51",
+  "data_atualizacao": "14/08/2026 12:33",
   "fonte": "ECMWF HRES",
   "recorte": "Brasil",
   "periodo": "15/08/2026 a 20/08/2026",
@@ -11,7 +11,78 @@
       "maior_tmax_c": 38.5,
       "menor_tmin_c": 8.6,
       "maior_tmed_c": 31.7,
-      "media_precipitacao_mm": 1.5
+      "menor_ur_min_pct": 11.8,
+      "menor_ur_med_pct": 23.7,
+      "maior_vento_medio_ms": 8.0,
+      "maior_vento_max_ms": 10.6,
+      "municipios_ur_abaixo_30": 1369,
+      "maior_precipitacao_local": {
+        "cd_mun": "4206504",
+        "municipio": "Guaramirim",
+        "uf": "SC",
+        "lat": -26.5,
+        "lon": -49.0,
+        "valor": 50.0
+      },
+      "media_precipitacao_mm": 1.5,
+      "maior_tmax_local": {
+        "cd_mun": "2211308",
+        "municipio": "Valença do Piauí",
+        "uf": "PI",
+        "lat": -6.25,
+        "lon": -42.0,
+        "valor": 38.5
+      },
+      "menor_tmin_local": {
+        "cd_mun": "4202503",
+        "municipio": "Bom Jardim da Serra",
+        "uf": "SC",
+        "lat": -28.25,
+        "lon": -49.75,
+        "valor": 8.6
+      },
+      "maior_tmed_local": {
+        "cd_mun": "2210409",
+        "municipio": "São Miguel do Tapuio",
+        "uf": "PI",
+        "lat": -5.75,
+        "lon": -42.0,
+        "valor": 31.7
+      },
+      "menor_ur_min_local": {
+        "cd_mun": "2203230",
+        "municipio": "Currais",
+        "uf": "PI",
+        "lat": -8.75,
+        "lon": -44.75,
+        "valor": 11.8
+      },
+      "menor_ur_med_local": {
+        "cd_mun": "5209101",
+        "municipio": "Goiatuba",
+        "uf": "GO",
+        "lat": -18.0,
+        "lon": -49.75,
+        "valor": 23.7
+      },
+      "maior_vento_medio_kmh": 28.8,
+      "maior_vento_medio_local": {
+        "cd_mun": "4300002",
+        "municipio": "Área Operacional \"Lagoa dos Patos\"",
+        "uf": "RS",
+        "lat": -30.5,
+        "lon": -51.0,
+        "valor": 8.0
+      },
+      "maior_vento_max_kmh": 38.2,
+      "maior_vento_max_local": {
+        "cd_mun": "4300002",
+        "municipio": "Área Operacional \"Lagoa dos Patos\"",
+        "uf": "RS",
+        "lat": -30.75,
+        "lon": -51.0,
+        "valor": 10.6
+      }
     },
     "2026-08-16": {
       "data": "2026-08-16",
@@ -20,7 +91,78 @@
       "maior_tmax_c": 38.9,
       "menor_tmin_c": 9.1,
       "maior_tmed_c": 32.8,
-      "media_precipitacao_mm": 1.2
+      "menor_ur_min_pct": 11.3,
+      "menor_ur_med_pct": 21.2,
+      "maior_vento_medio_ms": 12.3,
+      "maior_vento_max_ms": 13.9,
+      "municipios_ur_abaixo_30": 1339,
+      "maior_precipitacao_local": {
+        "cd_mun": "4202131",
+        "municipio": "Bela Vista do Toldo",
+        "uf": "SC",
+        "lat": -26.5,
+        "lon": -50.5,
+        "valor": 68.8
+      },
+      "media_precipitacao_mm": 1.2,
+      "maior_tmax_local": {
+        "cd_mun": "2209609",
+        "municipio": "São Félix do Piauí",
+        "uf": "PI",
+        "lat": -6.0,
+        "lon": -42.0,
+        "valor": 38.9
+      },
+      "menor_tmin_local": {
+        "cd_mun": "4218905",
+        "municipio": "Urubici",
+        "uf": "SC",
+        "lat": -28.0,
+        "lon": -49.5,
+        "valor": 9.1
+      },
+      "maior_tmed_local": {
+        "cd_mun": "2210409",
+        "municipio": "São Miguel do Tapuio",
+        "uf": "PI",
+        "lat": -5.75,
+        "lon": -42.0,
+        "valor": 32.8
+      },
+      "menor_ur_min_local": {
+        "cd_mun": "5211800",
+        "municipio": "Jaraguá",
+        "uf": "GO",
+        "lat": -15.5,
+        "lon": -49.25,
+        "valor": 11.3
+      },
+      "menor_ur_med_local": {
+        "cd_mun": "5209101",
+        "municipio": "Goiatuba",
+        "uf": "GO",
+        "lat": -18.0,
+        "lon": -50.0,
+        "valor": 21.2
+      },
+      "maior_vento_medio_kmh": 44.3,
+      "maior_vento_medio_local": {
+        "cd_mun": "4300002",
+        "municipio": "Área Operacional \"Lagoa dos Patos\"",
+        "uf": "RS",
+        "lat": -30.75,
+        "lon": -51.25,
+        "valor": 12.3
+      },
+      "maior_vento_max_kmh": 50.0,
+      "maior_vento_max_local": {
+        "cd_mun": "4300002",
+        "municipio": "Área Operacional \"Lagoa dos Patos\"",
+        "uf": "RS",
+        "lat": -30.75,
+        "lon": -51.25,
+        "valor": 13.9
+      }
     },
     "2026-08-17": {
       "data": "2026-08-17",
@@ -29,7 +171,78 @@
       "maior_tmax_c": 39.4,
       "menor_tmin_c": 11.2,
       "maior_tmed_c": 32.8,
-      "media_precipitacao_mm": 1.3
+      "menor_ur_min_pct": 11.3,
+      "menor_ur_med_pct": 20.1,
+      "maior_vento_medio_ms": 11.0,
+      "maior_vento_max_ms": 13.8,
+      "municipios_ur_abaixo_30": 1321,
+      "maior_precipitacao_local": {
+        "cd_mun": "4301875",
+        "municipio": "Barra do Quaraí",
+        "uf": "RS",
+        "lat": -30.25,
+        "lon": -57.5,
+        "valor": 59.7
+      },
+      "media_precipitacao_mm": 1.3,
+      "maior_tmax_local": {
+        "cd_mun": "5107800",
+        "municipio": "Santo Antônio de Leverger",
+        "uf": "MT",
+        "lat": -17.0,
+        "lon": -55.5,
+        "valor": 39.4
+      },
+      "menor_tmin_local": {
+        "cd_mun": "3133006",
+        "municipio": "Itamonte",
+        "uf": "MG",
+        "lat": -22.25,
+        "lon": -44.75,
+        "valor": 11.2
+      },
+      "maior_tmed_local": {
+        "cd_mun": "2210409",
+        "municipio": "São Miguel do Tapuio",
+        "uf": "PI",
+        "lat": -5.75,
+        "lon": -42.0,
+        "valor": 32.8
+      },
+      "menor_ur_min_local": {
+        "cd_mun": "5102702",
+        "municipio": "Canarana",
+        "uf": "MT",
+        "lat": -13.5,
+        "lon": -52.5,
+        "valor": 11.3
+      },
+      "menor_ur_med_local": {
+        "cd_mun": "5207535",
+        "municipio": "Faina",
+        "uf": "GO",
+        "lat": -15.25,
+        "lon": -50.25,
+        "valor": 20.1
+      },
+      "maior_vento_medio_kmh": 39.6,
+      "maior_vento_medio_local": {
+        "cd_mun": "4300002",
+        "municipio": "Área Operacional \"Lagoa dos Patos\"",
+        "uf": "RS",
+        "lat": -31.0,
+        "lon": -51.25,
+        "valor": 11.0
+      },
+      "maior_vento_max_kmh": 49.7,
+      "maior_vento_max_local": {
+        "cd_mun": "4300002",
+        "municipio": "Área Operacional \"Lagoa dos Patos\"",
+        "uf": "RS",
+        "lat": -31.0,
+        "lon": -51.25,
+        "valor": 13.8
+      }
     },
     "2026-08-18": {
       "data": "2026-08-18",
@@ -38,7 +251,78 @@
       "maior_tmax_c": 40.2,
       "menor_tmin_c": 10.4,
       "maior_tmed_c": 32.3,
-      "media_precipitacao_mm": 1.5
+      "menor_ur_min_pct": 12.1,
+      "menor_ur_med_pct": 20.8,
+      "maior_vento_medio_ms": 11.7,
+      "maior_vento_max_ms": 12.2,
+      "municipios_ur_abaixo_30": 1314,
+      "maior_precipitacao_local": {
+        "cd_mun": "4317301",
+        "municipio": "Santa Vitória do Palmar",
+        "uf": "RS",
+        "lat": -33.5,
+        "lon": -53.25,
+        "valor": 79.8
+      },
+      "media_precipitacao_mm": 1.5,
+      "maior_tmax_local": {
+        "cd_mun": "5107800",
+        "municipio": "Santo Antônio de Leverger",
+        "uf": "MT",
+        "lat": -16.5,
+        "lon": -55.5,
+        "valor": 40.2
+      },
+      "menor_tmin_local": {
+        "cd_mun": "3121100",
+        "municipio": "Delfim Moreira",
+        "uf": "MG",
+        "lat": -22.5,
+        "lon": -45.25,
+        "valor": 10.4
+      },
+      "maior_tmed_local": {
+        "cd_mun": "2210409",
+        "municipio": "São Miguel do Tapuio",
+        "uf": "PI",
+        "lat": -5.75,
+        "lon": -42.0,
+        "valor": 32.3
+      },
+      "menor_ur_min_local": {
+        "cd_mun": "5106109",
+        "municipio": "Nossa Senhora do Livramento",
+        "uf": "MT",
+        "lat": -15.75,
+        "lon": -56.25,
+        "valor": 12.1
+      },
+      "menor_ur_med_local": {
+        "cd_mun": "5006408",
+        "municipio": "Pedro Gomes",
+        "uf": "MS",
+        "lat": -17.75,
+        "lon": -54.75,
+        "valor": 20.8
+      },
+      "maior_vento_medio_kmh": 42.1,
+      "maior_vento_medio_local": {
+        "cd_mun": "3300258",
+        "municipio": "Arraial do Cabo",
+        "uf": "RJ",
+        "lat": -23.0,
+        "lon": -42.0,
+        "valor": 11.7
+      },
+      "maior_vento_max_kmh": 43.9,
+      "maior_vento_max_local": {
+        "cd_mun": "3300258",
+        "municipio": "Arraial do Cabo",
+        "uf": "RJ",
+        "lat": -23.0,
+        "lon": -42.0,
+        "valor": 12.2
+      }
     },
     "2026-08-19": {
       "data": "2026-08-19",
@@ -47,7 +331,78 @@
       "maior_tmax_c": 39.3,
       "menor_tmin_c": 11.0,
       "maior_tmed_c": 33.2,
-      "media_precipitacao_mm": 1.2
+      "menor_ur_min_pct": 12.2,
+      "menor_ur_med_pct": 20.9,
+      "maior_vento_medio_ms": 10.5,
+      "maior_vento_max_ms": 11.8,
+      "municipios_ur_abaixo_30": 1317,
+      "maior_precipitacao_local": {
+        "cd_mun": "4317301",
+        "municipio": "Santa Vitória do Palmar",
+        "uf": "RS",
+        "lat": -33.5,
+        "lon": -53.25,
+        "valor": 87.1
+      },
+      "media_precipitacao_mm": 1.2,
+      "maior_tmax_local": {
+        "cd_mun": "5003207",
+        "municipio": "Corumbá",
+        "uf": "MS",
+        "lat": -19.5,
+        "lon": -58.0,
+        "valor": 39.3
+      },
+      "menor_tmin_local": {
+        "cd_mun": "3107208",
+        "municipio": "Bocaina de Minas",
+        "uf": "MG",
+        "lat": -22.25,
+        "lon": -44.5,
+        "valor": 11.0
+      },
+      "maior_tmed_local": {
+        "cd_mun": "5007935",
+        "municipio": "Sonora",
+        "uf": "MS",
+        "lat": -17.75,
+        "lon": -55.0,
+        "valor": 33.2
+      },
+      "menor_ur_min_local": {
+        "cd_mun": "5106109",
+        "municipio": "Nossa Senhora do Livramento",
+        "uf": "MT",
+        "lat": -15.75,
+        "lon": -56.25,
+        "valor": 12.2
+      },
+      "menor_ur_med_local": {
+        "cd_mun": "5106109",
+        "municipio": "Nossa Senhora do Livramento",
+        "uf": "MT",
+        "lat": -15.75,
+        "lon": -56.5,
+        "valor": 20.9
+      },
+      "maior_vento_medio_kmh": 37.8,
+      "maior_vento_medio_local": {
+        "cd_mun": "3300258",
+        "municipio": "Arraial do Cabo",
+        "uf": "RJ",
+        "lat": -23.0,
+        "lon": -42.0,
+        "valor": 10.5
+      },
+      "maior_vento_max_kmh": 42.5,
+      "maior_vento_max_local": {
+        "cd_mun": "3300258",
+        "municipio": "Arraial do Cabo",
+        "uf": "RJ",
+        "lat": -23.0,
+        "lon": -42.0,
+        "valor": 11.8
+      }
     },
     "2026-08-20": {
       "data": "2026-08-20",
@@ -56,7 +411,78 @@
       "maior_tmax_c": 39.5,
       "menor_tmin_c": 10.7,
       "maior_tmed_c": 32.8,
-      "media_precipitacao_mm": 0.9
+      "menor_ur_min_pct": 13.3,
+      "menor_ur_med_pct": 23.3,
+      "maior_vento_medio_ms": 9.8,
+      "maior_vento_max_ms": 11.1,
+      "municipios_ur_abaixo_30": 1350,
+      "maior_precipitacao_local": {
+        "cd_mun": "1300201",
+        "municipio": "Atalaia do Norte",
+        "uf": "AM",
+        "lat": -6.5,
+        "lon": -73.0,
+        "valor": 30.9
+      },
+      "media_precipitacao_mm": 0.9,
+      "maior_tmax_local": {
+        "cd_mun": "5107800",
+        "municipio": "Santo Antônio de Leverger",
+        "uf": "MT",
+        "lat": -16.5,
+        "lon": -55.5,
+        "valor": 39.5
+      },
+      "menor_tmin_local": {
+        "cd_mun": "3141801",
+        "municipio": "Minas Novas",
+        "uf": "MG",
+        "lat": -17.5,
+        "lon": -42.25,
+        "valor": 10.7
+      },
+      "maior_tmed_local": {
+        "cd_mun": "5103403",
+        "municipio": "Cuiabá",
+        "uf": "MT",
+        "lat": -15.5,
+        "lon": -56.0,
+        "valor": 32.8
+      },
+      "menor_ur_min_local": {
+        "cd_mun": "5215603",
+        "municipio": "Padre Bernardo",
+        "uf": "GO",
+        "lat": -15.5,
+        "lon": -48.5,
+        "valor": 13.3
+      },
+      "menor_ur_med_local": {
+        "cd_mun": "5103403",
+        "municipio": "Cuiabá",
+        "uf": "MT",
+        "lat": -15.5,
+        "lon": -56.0,
+        "valor": 23.3
+      },
+      "maior_vento_medio_kmh": 35.3,
+      "maior_vento_medio_local": {
+        "cd_mun": "3300258",
+        "municipio": "Arraial do Cabo",
+        "uf": "RJ",
+        "lat": -23.0,
+        "lon": -42.0,
+        "valor": 9.8
+      },
+      "maior_vento_max_kmh": 40.0,
+      "maior_vento_max_local": {
+        "cd_mun": "2101707",
+        "municipio": "Barreirinhas",
+        "uf": "MA",
+        "lat": -2.5,
+        "lon": -43.0,
+        "valor": 11.1
+      }
     }
   },
   "acumulado": {
@@ -65,6 +491,76 @@
     "maior_tmax_c": 40.2,
     "menor_tmin_c": 8.6,
     "maior_tmed_c": 33.2,
-    "media_precipitacao_mm": 7.6
+    "menor_ur_min_pct": 11.3,
+    "menor_ur_med_pct": 20.1,
+    "maior_vento_medio_ms": 12.3,
+    "maior_vento_max_ms": 13.9,
+    "maior_precipitacao_local": {
+      "cd_mun": "4317301",
+      "municipio": "Santa Vitória do Palmar",
+      "uf": "RS",
+      "lat": -33.5,
+      "lon": -53.25,
+      "valor": 196.0
+    },
+    "media_precipitacao_mm": 7.6,
+    "maior_tmax_local": {
+      "cd_mun": "5107800",
+      "municipio": "Santo Antônio de Leverger",
+      "uf": "MT",
+      "lat": -16.5,
+      "lon": -55.5,
+      "valor": 40.2
+    },
+    "menor_tmin_local": {
+      "cd_mun": "4202503",
+      "municipio": "Bom Jardim da Serra",
+      "uf": "SC",
+      "lat": -28.25,
+      "lon": -49.75,
+      "valor": 8.6
+    },
+    "maior_tmed_local": {
+      "cd_mun": "5007935",
+      "municipio": "Sonora",
+      "uf": "MS",
+      "lat": -17.75,
+      "lon": -55.0,
+      "valor": 33.2
+    },
+    "menor_ur_min_local": {
+      "cd_mun": "5102702",
+      "municipio": "Canarana",
+      "uf": "MT",
+      "lat": -13.5,
+      "lon": -52.5,
+      "valor": 11.3
+    },
+    "menor_ur_med_local": {
+      "cd_mun": "5207535",
+      "municipio": "Faina",
+      "uf": "GO",
+      "lat": -15.25,
+      "lon": -50.25,
+      "valor": 20.1
+    },
+    "maior_vento_medio_kmh": 44.3,
+    "maior_vento_medio_local": {
+      "cd_mun": "4300002",
+      "municipio": "Área Operacional \"Lagoa dos Patos\"",
+      "uf": "RS",
+      "lat": -30.75,
+      "lon": -51.25,
+      "valor": 12.3
+    },
+    "maior_vento_max_kmh": 50.0,
+    "maior_vento_max_local": {
+      "cd_mun": "4300002",
+      "municipio": "Área Operacional \"Lagoa dos Patos\"",
+      "uf": "RS",
+      "lat": -30.75,
+      "lon": -51.25,
+      "valor": 13.9
+    }
   }
 }
