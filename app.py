@@ -27,6 +27,12 @@ VAR_OPCOES = {
     "tmin": {"label": "Temperatura mínima diária (°C)", "prefix": "ecmwf_tmin_", "usa_data": True},
     "tmax": {"label": "Temperatura máxima diária (°C)", "prefix": "ecmwf_tmax_", "usa_data": True},
     "tmed": {"label": "Temperatura média diária (°C)", "prefix": "ecmwf_tmed_", "usa_data": True},
+    "urmin": {"label": "Umidade relativa mínima diária (%)", "prefix": "ecmwf_urmin_", "usa_data": True},
+    "urmed": {"label": "Umidade relativa média diária (%)", "prefix": "ecmwf_urmed_", "usa_data": True},
+    "urmax": {"label": "Umidade relativa máxima diária (%)", "prefix": "ecmwf_urmax_", "usa_data": True},
+    "vento_medio": {"label": "Velocidade média diária do vento a 10 m (m/s)", "prefix": "ecmwf_vento_medio_", "usa_data": True},
+    "vento_max": {"label": "Velocidade máxima diária do vento a 10 m (m/s)", "prefix": "ecmwf_vento_max_", "usa_data": True},
+    "vento_direcao": {"label": "Direção predominante diária do vento a 10 m", "prefix": "ecmwf_vento_direcao_", "usa_data": True},
     "prec_acum": {"label": "Precipitação acumulada no período (mm)", "prefix": "ecmwf_prec_acumulada_", "usa_data": False},
 }
 
@@ -100,6 +106,23 @@ def _get_resumo_para_contexto(resumo: dict, data_iso: str | None, var_key: str |
     return resumo, False
 
 
+def _local_resumo(contexto: dict, campo: str, fallback: str = "Brasil") -> str:
+    local = contexto.get(campo, {}) or {}
+    if not isinstance(local, dict):
+        return fallback
+
+    municipio = str(local.get("municipio", "")).strip()
+    uf = str(local.get("uf", "")).strip()
+
+    if municipio and uf:
+        return f"{municipio}/{uf}"
+    if municipio:
+        return municipio
+    if uf:
+        return uf
+    return fallback
+
+
 def montar_cards_resumo(data_iso: str | None = None, var_key: str | None = None):
     resumo = carregar_resumo_painel()
     contexto, eh_acumulado = _get_resumo_para_contexto(resumo, data_iso, var_key)
@@ -107,9 +130,6 @@ def montar_cards_resumo(data_iso: str | None = None, var_key: str | None = None)
     if eh_acumulado:
         periodo = contexto.get("periodo") or resumo.get("periodo", "Período não informado")
         titulo_chuva = "Maior precipitação acumulada"
-        valor_chuva = _fmt_num(contexto.get("maior_precipitacao_mm"), 1, " mm")
-        detalhe_chuva = "acumulado no Brasil"
-        detalhe_temp = "no período, Brasil"
     else:
         periodo = (
             contexto.get("data_br")
@@ -118,25 +138,77 @@ def montar_cards_resumo(data_iso: str | None = None, var_key: str | None = None)
         )
         titulo_chuva = "Maior precipitação diária"
 
-        # O JSON diário usa "maior_precipitacao_mm".
-        # Mantive fallback para "maior_precipitacao_diaria_mm" se algum JSON antigo tiver essa chave.
-        valor_chuva = _fmt_num(
-            contexto.get("maior_precipitacao_mm", contexto.get("maior_precipitacao_diaria_mm")),
-            1,
-            " mm",
-        )
-        detalhe_chuva = "maior valor no Brasil"
-        detalhe_temp = "na data selecionada, Brasil"
-
-    return dbc.Row(
-        [
-            dbc.Col(card_resumo("Referência", periodo, "Brasil"), md=3, sm=6, className="mb-2"),
-            dbc.Col(card_resumo(titulo_chuva, valor_chuva, detalhe_chuva), md=3, sm=6, className="mb-2"),
-            dbc.Col(card_resumo("Maior temperatura máxima", _fmt_num(contexto.get("maior_tmax_c"), 1, " °C"), detalhe_temp), md=3, sm=6, className="mb-2"),
-            dbc.Col(card_resumo("Menor temperatura mínima", _fmt_num(contexto.get("menor_tmin_c"), 1, " °C"), detalhe_temp), md=3, sm=6, className="mb-2"),
-        ],
-        className="mb-3",
+    valor_chuva = _fmt_num(
+        contexto.get("maior_precipitacao_mm", contexto.get("maior_precipitacao_diaria_mm")),
+        1,
+        " mm",
     )
+
+    local_chuva = _local_resumo(contexto, "maior_precipitacao_local")
+    local_tmax = _local_resumo(contexto, "maior_tmax_local")
+    local_tmin = _local_resumo(contexto, "menor_tmin_local")
+    local_ur = _local_resumo(contexto, "menor_ur_min_local")
+    local_vento = _local_resumo(contexto, "maior_vento_max_local")
+
+    ur_min = contexto.get("menor_ur_min_pct")
+    municipios_ur_baixa = contexto.get("municipios_ur_abaixo_30", 0)
+
+    vento_kmh = contexto.get("maior_vento_max_kmh")
+    if vento_kmh is None and contexto.get("maior_vento_max_ms") is not None:
+        try:
+            vento_kmh = float(contexto.get("maior_vento_max_ms")) * 3.6
+        except Exception:
+            vento_kmh = None
+
+    return html.Div([
+        dbc.Row(
+            [
+                dbc.Col(card_resumo("Referência", periodo, "Brasil"), md=3, sm=6, className="mb-2"),
+                dbc.Col(card_resumo(titulo_chuva, valor_chuva, local_chuva), md=3, sm=6, className="mb-2"),
+                dbc.Col(card_resumo("Maior temperatura máxima", _fmt_num(contexto.get("maior_tmax_c"), 1, " °C"), local_tmax), md=3, sm=6, className="mb-2"),
+                dbc.Col(card_resumo("Menor temperatura mínima", _fmt_num(contexto.get("menor_tmin_c"), 1, " °C"), local_tmin), md=3, sm=6, className="mb-2"),
+            ],
+            className="mb-1",
+        ),
+        dbc.Row(
+            [
+                dbc.Col(
+                    card_resumo(
+                        "Menor umidade relativa mínima",
+                        _fmt_num(ur_min, 1, " %"),
+                        local_ur,
+                        "#B45309" if ur_min is not None and float(ur_min) < 30 else "#243B53",
+                    ),
+                    md=4,
+                    sm=6,
+                    className="mb-2",
+                ),
+                dbc.Col(
+                    card_resumo(
+                        "Municípios com UR mínima < 30%",
+                        str(int(municipios_ur_baixa or 0)),
+                        "baixa umidade prevista",
+                        "#B45309",
+                    ),
+                    md=4,
+                    sm=6,
+                    className="mb-2",
+                ),
+                dbc.Col(
+                    card_resumo(
+                        "Maior velocidade do vento",
+                        _fmt_num(vento_kmh, 1, " km/h"),
+                        local_vento,
+                        "#8A1C1C" if vento_kmh is not None and float(vento_kmh) >= 60 else "#243B53",
+                    ),
+                    md=4,
+                    sm=6,
+                    className="mb-2",
+                ),
+            ],
+            className="mb-3",
+        ),
+    ])
 
 
 # ----------------- HELPERS (SAÚDE + CHUVA) ----------------- #
@@ -202,7 +274,7 @@ def montar_cards_saude(data_iso: str | None = None, var_key: str | None = None):
 
     if not ctx:
         return html.Div(
-            "Resumo saúde/chuva ainda não disponível. Gere e suba o arquivo resumo_saude_chuva.json.",
+            "Resumo de saúde ainda não disponível. Gere e suba o arquivo resumo_saude_chuva.json.",
             className="text-muted mb-3",
             style={"fontSize": "0.9rem"},
         )
@@ -211,19 +283,23 @@ def montar_cards_saude(data_iso: str | None = None, var_key: str | None = None):
         criterio = resumo.get("criterio_acumulado", {})
         limiar_alerta = criterio.get("alerta_mm", 150)
         titulo_base = f"chuva acumulada ≥ {limiar_alerta} mm"
-        campo_chuva = "chuva_alerta"
         detalhe_periodo = "período acumulado"
     else:
         criterio = resumo.get("criterio_diario", {})
         limiar_alerta = criterio.get("alerta_mm", 50)
         titulo_base = f"chuva diária ≥ {limiar_alerta} mm"
-        campo_chuva = "chuva_alerta"
         detalhe_periodo = "data selecionada"
+
+    campo_chuva = "chuva_alerta"
 
     upa = _contagem_tipo(ctx, "upa", campo_chuva)
     ubs = _contagem_tipo(ctx, "ubs", campo_chuva)
     ubsi = _contagem_tipo(ctx, "ubsi", campo_chuva)
     muito_alto = _total_saude(ctx, "chuva_alerta_e_sgb")
+
+    baixa_umidade = _total_saude(ctx, "baixa_umidade_ur_lt_30")
+    vento_forte = _total_saude(ctx, "vento_forte_ge_60_kmh")
+
     texto = ctx.get("texto_saude", "")
 
     return dbc.Card(
@@ -243,8 +319,35 @@ def montar_cards_saude(data_iso: str | None = None, var_key: str | None = None):
                 ],
                 className="mb-1",
             ),
+            dbc.Row(
+                [
+                    dbc.Col(
+                        card_saude(
+                            "Unidades com baixa umidade",
+                            str(baixa_umidade),
+                            "UR mínima < 30%",
+                            "#B45309",
+                        ),
+                        md=6,
+                        sm=6,
+                        className="mb-2",
+                    ),
+                    dbc.Col(
+                        card_saude(
+                            "Unidades com vento forte",
+                            str(vento_forte),
+                            "vento máximo ≥ 60 km/h",
+                            "#8A1C1C",
+                        ),
+                        md=6,
+                        sm=6,
+                        className="mb-2",
+                    ),
+                ],
+                className="mb-1",
+            ),
             html.Small(
-                f"Critério referente ao {detalhe_periodo}. Para acumulado, os limiares são diferentes dos limiares diários.",
+                f"Critérios referentes ao {detalhe_periodo}. Baixa umidade e vento forte são apresentados como fatores meteorológicos adicionais.",
                 className="text-muted",
             ),
         ]),
@@ -292,6 +395,17 @@ def _buscar_unidade_exposta(ctx: dict, id_unidade: str | None) -> dict | None:
     return None
 
 
+def _direcao_cardinal(graus) -> str:
+    try:
+        g = float(graus) % 360.0
+    except Exception:
+        return "—"
+
+    setores = ["N", "NE", "E", "SE", "S", "SW", "W", "NW"]
+    idx = int((g + 22.5) // 45) % 8
+    return setores[idx]
+
+
 def montar_detalhe_unidade_exposta(item: dict | None, var_key: str | None = None):
     if not item:
         return html.Div(
@@ -316,9 +430,65 @@ def montar_detalhe_unidade_exposta(item: dict | None, var_key: str | None = None
     else:
         municipio_fmt = "Não informado"
 
-    precipitacao = _fmt_num(item.get("precipitacao_mm"), 1, " mm")
+    prec_val = item.get("precipitacao_mm")
+    if prec_val is None:
+        prec_val = item.get("precipitacao_acumulada_mm")
+
+    precipitacao = _fmt_num(prec_val, 1, " mm")
     classificacao = str(item.get("atencao_saude", "")).strip() or "—"
     sgb = str(item.get("sgb_risco", "")).strip() or "Fora/sem SGB"
+
+    ur_min = _fmt_num(item.get("ur_min_pct"), 1, " %")
+    ur_med = _fmt_num(item.get("ur_med_pct"), 1, " %")
+
+    vento_medio_ms = item.get("vento_medio_ms")
+    vento_max_ms = item.get("vento_max_ms")
+    vento_max_kmh = item.get("vento_max_kmh")
+
+    if vento_max_kmh is None and vento_max_ms is not None:
+        try:
+            vento_max_kmh = float(vento_max_ms) * 3.6
+        except Exception:
+            vento_max_kmh = None
+
+    vento_medio_kmh = None
+    if vento_medio_ms is not None:
+        try:
+            vento_medio_kmh = float(vento_medio_ms) * 3.6
+        except Exception:
+            vento_medio_kmh = None
+
+    direcao_graus = item.get("vento_direcao_graus")
+    direcao = _direcao_cardinal(direcao_graus)
+
+    baixa_umidade = bool(item.get("baixa_umidade", False))
+    vento_forte = bool(item.get("vento_forte", False))
+
+    fatores = item.get("fatores_risco", []) or []
+    if isinstance(fatores, str):
+        fatores = [fatores]
+
+    if baixa_umidade and "baixa_umidade" not in fatores:
+        fatores.append("baixa_umidade")
+    if vento_forte and "vento_forte" not in fatores:
+        fatores.append("vento_forte")
+
+    rotulos_fatores = {
+        "chuva_alerta": "Chuva em nível de alerta",
+        "chuva": "Chuva em nível de alerta",
+        "baixa_umidade": "Baixa umidade (UR < 30%)",
+        "vento_forte": "Vento forte (≥ 60 km/h)",
+        "sgb_alto_muito_alto": "Setor SGB Alto/Muito alto",
+    }
+
+    fatores_txt = [
+        rotulos_fatores.get(str(f), str(f).replace("_", " ").title())
+        for f in fatores
+    ]
+
+    if not fatores_txt:
+        fatores_txt = ["Sem fator adicional informado"]
+
     lat = item.get("lat")
     lon = item.get("lon")
     rotulo_prec = "Precipitação acumulada prevista" if var_key == "prec_acum" else "Precipitação diária prevista"
@@ -326,17 +496,37 @@ def montar_detalhe_unidade_exposta(item: dict | None, var_key: str | None = None
     return dbc.Card(
         dbc.CardBody([
             html.H5(nome, className="mb-3", style={"fontWeight": "800", "color": "#102A43"}),
+
             dbc.Row([
                 dbc.Col([html.Small("Tipo", className="text-muted"), html.Div(tipo, className="fw-bold")], md=3, sm=6, className="mb-2"),
                 dbc.Col([html.Small("CNES", className="text-muted"), html.Div(cnes, className="fw-bold")], md=3, sm=6, className="mb-2"),
                 dbc.Col([html.Small("Município", className="text-muted"), html.Div(municipio_fmt, className="fw-bold")], md=3, sm=6, className="mb-2"),
                 dbc.Col([html.Small("Código municipal", className="text-muted"), html.Div(cd_mun, className="fw-bold")], md=3, sm=6, className="mb-2"),
             ]),
+
             dbc.Row([
                 dbc.Col([html.Small(rotulo_prec, className="text-muted"), html.Div(precipitacao, className="fw-bold")], md=4, sm=6, className="mb-2"),
-                dbc.Col([html.Small("Classificação", className="text-muted"), html.Div(classificacao, className="fw-bold")], md=4, sm=6, className="mb-2"),
+                dbc.Col([html.Small("Classificação chuva/SGB", className="text-muted"), html.Div(classificacao, className="fw-bold")], md=4, sm=6, className="mb-2"),
                 dbc.Col([html.Small("SGB", className="text-muted"), html.Div(sgb, className="fw-bold")], md=4, sm=6, className="mb-2"),
             ]),
+
+            dbc.Row([
+                dbc.Col([html.Small("UR mínima", className="text-muted"), html.Div(ur_min, className="fw-bold", style={"color": "#B45309" if baixa_umidade else "#102A43"})], md=3, sm=6, className="mb-2"),
+                dbc.Col([html.Small("UR média", className="text-muted"), html.Div(ur_med, className="fw-bold")], md=3, sm=6, className="mb-2"),
+                dbc.Col([html.Small("Vento médio", className="text-muted"), html.Div(_fmt_num(vento_medio_kmh, 1, " km/h"), className="fw-bold")], md=3, sm=6, className="mb-2"),
+                dbc.Col([html.Small("Vento máximo", className="text-muted"), html.Div(_fmt_num(vento_max_kmh, 1, " km/h"), className="fw-bold", style={"color": "#8A1C1C" if vento_forte else "#102A43"})], md=3, sm=6, className="mb-2"),
+            ]),
+
+            dbc.Row([
+                dbc.Col([html.Small("Direção predominante", className="text-muted"), html.Div(f"{direcao} ({_fmt_num(direcao_graus, 0, '°')})" if direcao_graus is not None else "—", className="fw-bold")], md=4, sm=6, className="mb-2"),
+                dbc.Col([
+                    html.Small("Fatores meteorológicos", className="text-muted"),
+                    html.Div(
+                        [dbc.Badge(f, color="warning" if "Umidade" in f else "danger" if "Vento" in f else "secondary", className="me-1 mb-1") for f in fatores_txt]
+                    )
+                ], md=8, sm=12, className="mb-2"),
+            ]),
+
             html.Small(
                 f"Coordenadas: {lat}, {lon}",
                 className="text-muted",
@@ -357,7 +547,7 @@ def montar_bloco_unidades_expostas(data_iso: str | None = None, var_key: str | N
             html.Div([
                 html.H5("Unidades de saúde expostas", className="mb-1", style={"fontWeight": "800", "color": "#102A43"}),
                 html.Div(
-                    f"{total} unidade(s) identificada(s) no critério de alerta do contexto selecionado.",
+                    f"{total} unidade(s) identificada(s) por chuva em alerta, baixa umidade e/ou vento forte no contexto selecionado.",
                     id="texto-total-unidades-expostas",
                     className="text-muted mb-3",
                     style={"fontSize": "0.9rem"},
@@ -1100,7 +1290,7 @@ app.layout = dbc.Container(
                                     className="mb-2",
                                 ),
                                 html.Small(
-                                    "A animação não se aplica à precipitação acumulada.",
+                                    "A animação não se aplica à precipitação acumulada; para as demais variáveis, percorre todas as datas disponíveis.",
                                     className="text-muted",
                                 ),
 
@@ -1183,7 +1373,7 @@ app.layout = dbc.Container(
         ),
 
         html.Footer(
-            "Fonte: ECMWF Open Data – processamento local CGCLIMA/SSCLIMA.",
+            "Fonte: ECMWF Open Data – processamento local CGCLIMA/SSCLIMA. UR calculada a partir de temperatura e ponto de orvalho a 2 m; vento a 10 m.",
             className="text-muted mt-2 mb-2",
             style={"fontSize": "0.85rem"},
         ),
@@ -1220,7 +1410,7 @@ def atualizar_total_unidades_expostas(data_iso, var_key):
     resumo = carregar_resumo_saude()
     ctx, _ = _get_saude_contexto(resumo, data_iso, var_key)
     total = len(_todas_unidades_expostas(ctx)) if ctx else 0
-    return f"{total} unidade(s) identificada(s) no critério de alerta do contexto selecionado."
+    return f"{total} unidade(s) identificada(s) por chuva em alerta, baixa umidade e/ou vento forte no contexto selecionado."
 
 
 @app.callback(
