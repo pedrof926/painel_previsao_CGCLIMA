@@ -796,7 +796,7 @@ def construir_mapa_sobreposicao(var_key: str, data_iso: str | None, camada_unida
             traceorder="normal",
             font=dict(size=11),
         ),
-        uirevision="overlay_lock",
+        uirevision=f"overlay_{var_key}",
     )
 
     # âncora invisível pra garantir mapbox sempre
@@ -1193,18 +1193,29 @@ def atualizar_mapa_previsao(data_iso, var_key, modo):
 
 @app.callback(
     Output("graph-overlay", "figure"),
-    Input("dropdown-data", "value"),
     Input("radio-var", "value"),
+    Input("dropdown-data", "value"),
     Input("dropdown-unidades", "value"),
     Input("check-overlay", "value"),
 )
-def atualizar_overlay(data_iso, var_key, camada_unidade, check_values):
+def atualizar_overlay(var_key, data_iso, camada_unidade, check_values):
+    print("\n" + "=" * 70)
+    print("ATUALIZANDO MAPA INTEGRADO")
+    print(f"var_key          = {var_key!r}")
+    print(f"data_iso         = {data_iso!r}")
+    print(f"camada_unidade   = {camada_unidade!r}")
+    print(f"check_values     = {check_values!r}")
+    print("=" * 70)
+
+    if var_key is None:
+        var_key = "prec_acum"
+
     check_values = check_values or []
     mostrar_previsao = "prev" in check_values
     mostrar_unidades = "uni" in check_values
     mostrar_sgb = "sgb" in check_values
 
-    return construir_mapa_sobreposicao(
+    fig = construir_mapa_sobreposicao(
         var_key=var_key,
         data_iso=data_iso,
         camada_unidade=camada_unidade or "upa",
@@ -1212,6 +1223,8 @@ def atualizar_overlay(data_iso, var_key, camada_unidade, check_values):
         mostrar_unidades=mostrar_unidades,
         mostrar_sgb=mostrar_sgb,
     )
+
+    return fig
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=8050, debug=True)
