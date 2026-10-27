@@ -1,197 +1,37 @@
 {
-  "data_atualizacao": "25/10/2026 07:50",
+  "data_atualizacao": "27/10/2026 06:57",
   "fonte": "ECMWF HRES",
   "recorte": "Brasil",
-  "periodo": "26/10/2026 a 31/10/2026",
+  "periodo": "28/10/2026 a 02/11/2026",
   "datas": {
-    "2026-10-26": {
-      "data": "2026-10-26",
-      "data_br": "26/10/2026",
-      "maior_precipitacao_mm": 113.5,
-      "maior_tmax_c": 40.3,
-      "menor_tmin_c": 7.3,
-      "maior_tmed_c": 34.6,
-      "menor_ur_min_pct": 16.0,
-      "menor_ur_med_pct": 28.5,
-      "maior_vento_medio_ms": 9.3,
-      "maior_vento_max_ms": 11.8,
-      "municipios_ur_abaixo_30": 639,
-      "maior_precipitacao_local": {
-        "cd_mun": "3550704",
-        "municipio": "São Sebastião",
-        "uf": "SP",
-        "lat": -23.75,
-        "lon": -45.75,
-        "valor": 113.5
-      },
-      "media_precipitacao_mm": 3.7,
-      "maior_tmax_local": {
-        "cd_mun": "2209609",
-        "municipio": "São Félix do Piauí",
-        "uf": "PI",
-        "lat": -6.0,
-        "lon": -42.0,
-        "valor": 40.3
-      },
-      "menor_tmin_local": {
-        "cd_mun": "4202503",
-        "municipio": "Bom Jardim da Serra",
-        "uf": "SC",
-        "lat": -28.25,
-        "lon": -49.75,
-        "valor": 7.3
-      },
-      "maior_tmed_local": {
-        "cd_mun": "2209609",
-        "municipio": "São Félix do Piauí",
-        "uf": "PI",
-        "lat": -6.0,
-        "lon": -42.0,
-        "valor": 34.6
-      },
-      "menor_ur_min_local": {
-        "cd_mun": "2613909",
-        "municipio": "Serra Talhada",
-        "uf": "PE",
-        "lat": -8.25,
-        "lon": -38.25,
-        "valor": 16.0
-      },
-      "menor_ur_med_local": {
-        "cd_mun": "2207934",
-        "municipio": "Pedro Laurentino",
-        "uf": "PI",
-        "lat": -8.25,
-        "lon": -42.25,
-        "valor": 28.5
-      },
-      "maior_vento_medio_kmh": 33.5,
-      "maior_vento_medio_local": {
-        "cd_mun": "4300002",
-        "municipio": "Área Operacional \"Lagoa dos Patos\"",
-        "uf": "RS",
-        "lat": -31.5,
-        "lon": -51.75,
-        "valor": 9.3
-      },
-      "maior_vento_max_kmh": 42.5,
-      "maior_vento_max_local": {
-        "cd_mun": "4300002",
-        "municipio": "Área Operacional \"Lagoa dos Patos\"",
-        "uf": "RS",
-        "lat": -31.5,
-        "lon": -51.75,
-        "valor": 11.8
-      }
-    },
-    "2026-10-27": {
-      "data": "2026-10-27",
-      "data_br": "27/10/2026",
-      "maior_precipitacao_mm": 81.5,
-      "maior_tmax_c": 41.2,
-      "menor_tmin_c": 5.7,
-      "maior_tmed_c": 34.4,
-      "menor_ur_min_pct": 18.3,
-      "menor_ur_med_pct": 31.5,
-      "maior_vento_medio_ms": 8.5,
-      "maior_vento_max_ms": 10.4,
-      "municipios_ur_abaixo_30": 443,
-      "maior_precipitacao_local": {
-        "cd_mun": "3301157",
-        "municipio": "Cardoso Moreira",
-        "uf": "RJ",
-        "lat": -21.5,
-        "lon": -41.5,
-        "valor": 81.5
-      },
-      "media_precipitacao_mm": 4.8,
-      "maior_tmax_local": {
-        "cd_mun": "2700904",
-        "municipio": "Belo Monte",
-        "uf": "AL",
-        "lat": -9.75,
-        "lon": -37.25,
-        "valor": 41.2
-      },
-      "menor_tmin_local": {
-        "cd_mun": "4202503",
-        "municipio": "Bom Jardim da Serra",
-        "uf": "SC",
-        "lat": -28.25,
-        "lon": -49.75,
-        "valor": 5.7
-      },
-      "maior_tmed_local": {
-        "cd_mun": "2202802",
-        "municipio": "Conceição do Canindé",
-        "uf": "PI",
-        "lat": -8.0,
-        "lon": -41.5,
-        "valor": 34.4
-      },
-      "menor_ur_min_local": {
-        "cd_mun": "2614105",
-        "municipio": "Sertânia",
-        "uf": "PE",
-        "lat": -8.25,
-        "lon": -37.5,
-        "valor": 18.3
-      },
-      "menor_ur_med_local": {
-        "cd_mun": "2611101",
-        "municipio": "Petrolina",
-        "uf": "PE",
-        "lat": -9.0,
-        "lon": -40.5,
-        "valor": 31.5
-      },
-      "maior_vento_medio_kmh": 30.6,
-      "maior_vento_medio_local": {
-        "cd_mun": "3300258",
-        "municipio": "Arraial do Cabo",
-        "uf": "RJ",
-        "lat": -23.0,
-        "lon": -42.0,
-        "valor": 8.5
-      },
-      "maior_vento_max_kmh": 37.4,
-      "maior_vento_max_local": {
-        "cd_mun": "3301009",
-        "municipio": "Campos dos Goytacazes",
-        "uf": "RJ",
-        "lat": -22.0,
-        "lon": -41.0,
-        "valor": 10.4
-      }
-    },
     "2026-10-28": {
       "data": "2026-10-28",
       "data_br": "28/10/2026",
-      "maior_precipitacao_mm": 74.0,
-      "maior_tmax_c": 40.9,
-      "menor_tmin_c": 4.1,
-      "maior_tmed_c": 33.9,
-      "menor_ur_min_pct": 15.7,
-      "menor_ur_med_pct": 34.0,
-      "maior_vento_medio_ms": 8.3,
-      "maior_vento_max_ms": 11.6,
-      "municipios_ur_abaixo_30": 401,
+      "maior_precipitacao_mm": 149.7,
+      "maior_tmax_c": 40.2,
+      "menor_tmin_c": 4.5,
+      "maior_tmed_c": 33.7,
+      "menor_ur_min_pct": 18.6,
+      "menor_ur_med_pct": 36.7,
+      "maior_vento_medio_ms": 8.4,
+      "maior_vento_max_ms": 10.5,
+      "municipios_ur_abaixo_30": 298,
       "maior_precipitacao_local": {
-        "cd_mun": "5214606",
-        "municipio": "Niquelândia",
-        "uf": "GO",
-        "lat": -14.25,
-        "lon": -48.25,
-        "valor": 74.0
+        "cd_mun": "1302405",
+        "municipio": "Lábrea",
+        "uf": "AM",
+        "lat": -8.25,
+        "lon": -64.75,
+        "valor": 149.7
       },
-      "media_precipitacao_mm": 5.1,
+      "media_precipitacao_mm": 3.5,
       "maior_tmax_local": {
-        "cd_mun": "2208304",
-        "municipio": "Piracuruca",
+        "cd_mun": "2203420",
+        "municipio": "Domingos Mourão",
         "uf": "PI",
-        "lat": -4.0,
-        "lon": -41.5,
-        "valor": 40.9
+        "lat": -4.25,
+        "lon": -41.25,
+        "valor": 40.2
       },
       "menor_tmin_local": {
         "cd_mun": "4202503",
@@ -199,79 +39,79 @@
         "uf": "SC",
         "lat": -28.25,
         "lon": -49.75,
-        "valor": 4.1
+        "valor": 4.5
       },
       "maior_tmed_local": {
-        "cd_mun": "2210409",
-        "municipio": "São Miguel do Tapuio",
-        "uf": "PI",
-        "lat": -5.75,
-        "lon": -42.0,
-        "valor": 33.9
+        "cd_mun": "1400456",
+        "municipio": "Pacaraima",
+        "uf": "RR",
+        "lat": 4.0,
+        "lon": -60.75,
+        "valor": 33.7
       },
       "menor_ur_min_local": {
-        "cd_mun": "2208304",
-        "municipio": "Piracuruca",
+        "cd_mun": "2203420",
+        "municipio": "Domingos Mourão",
         "uf": "PI",
-        "lat": -3.75,
-        "lon": -41.5,
-        "valor": 15.7
+        "lat": -4.25,
+        "lon": -41.25,
+        "valor": 18.6
       },
       "menor_ur_med_local": {
         "cd_mun": "2208106",
         "municipio": "Pimenteiras",
         "uf": "PI",
-        "lat": -6.25,
-        "lon": -41.5,
-        "valor": 34.0
+        "lat": -6.5,
+        "lon": -41.25,
+        "valor": 36.7
       },
-      "maior_vento_medio_kmh": 29.9,
+      "maior_vento_medio_kmh": 30.2,
       "maior_vento_medio_local": {
-        "cd_mun": "2922003",
-        "municipio": "Mucuri",
-        "uf": "BA",
-        "lat": -18.0,
-        "lon": -39.5,
-        "valor": 8.3
+        "cd_mun": "3200607",
+        "municipio": "Aracruz",
+        "uf": "ES",
+        "lat": -19.75,
+        "lon": -40.0,
+        "valor": 8.4
       },
-      "maior_vento_max_kmh": 41.8,
+      "maior_vento_max_kmh": 37.8,
       "maior_vento_max_local": {
-        "cd_mun": "2906824",
-        "municipio": "Canudos",
+        "cd_mun": "2907707",
+        "municipio": "Chorrochó",
         "uf": "BA",
-        "lat": -9.75,
-        "lon": -39.0,
-        "valor": 11.6
+        "lat": -9.5,
+        "lon": -39.25,
+        "valor": 10.5
       }
     },
     "2026-10-29": {
       "data": "2026-10-29",
       "data_br": "29/10/2026",
-      "maior_precipitacao_mm": 97.9,
-      "maior_tmax_c": 40.9,
+      "maior_precipitacao_mm": 78.4,
+      "maior_tmax_c": 41.0,
       "menor_tmin_c": 7.7,
-      "maior_tmed_c": 34.6,
-      "menor_ur_min_pct": 15.7,
-      "menor_ur_med_pct": 32.1,
-      "maior_vento_medio_ms": 8.1,
-      "maior_vento_max_ms": 10.5,
-      "municipios_ur_abaixo_30": 365,
+      "maior_tmed_c": 34.0,
+      "menor_ur_min_pct": 15.2,
+      "menor_ur_med_pct": 39.7,
+      "maior_vento_medio_ms": 7.8,
+      "maior_vento_max_ms": 10.6,
+      "municipios_ur_abaixo_30": 236,
       "maior_precipitacao_local": {
-        "cd_mun": "5105507",
-        "municipio": "Vila Bela da Santíssima Trindade",
-        "uf": "MT",
-        "lat": -15.0,
-        "lon": -60.0,
-        "valor": 97.9
+        "cd_mun": "2932903",
+        "municipio": "Valença",
+        "uf": "BA",
+        "lat": -13.25,
+        "lon": -39.0,
+        "valor": 78.4
       },
-      "media_precipitacao_mm": 6.5,
+      "media_precipitacao_mm": 4.9,
       "maior_tmax_local": {
         "cd_mun": "1505106",
         "municipio": "Óbidos",
         "uf": "PA",
         "lat": -1.25,
         "lon": -55.75,
-        "valor": 40.9
+        "valor": 41.0
       },
       "menor_tmin_local": {
         "cd_mun": "4202503",
@@ -282,156 +122,156 @@
         "valor": 7.7
       },
       "maior_tmed_local": {
-        "cd_mun": "2209609",
-        "municipio": "São Félix do Piauí",
-        "uf": "PI",
-        "lat": -6.0,
-        "lon": -42.0,
-        "valor": 34.6
+        "cd_mun": "1400027",
+        "municipio": "Amajari",
+        "uf": "RR",
+        "lat": 3.75,
+        "lon": -61.0,
+        "valor": 34.0
       },
       "menor_ur_min_local": {
-        "cd_mun": "2505600",
-        "municipio": "Diamante",
+        "cd_mun": "2511301",
+        "municipio": "Piancó",
         "uf": "PB",
-        "lat": -7.5,
-        "lon": -38.25,
-        "valor": 15.7
+        "lat": -7.25,
+        "lon": -38.0,
+        "valor": 15.2
       },
       "menor_ur_med_local": {
-        "cd_mun": "2210409",
-        "municipio": "São Miguel do Tapuio",
-        "uf": "PI",
-        "lat": -5.75,
-        "lon": -41.5,
-        "valor": 32.1
+        "cd_mun": "1500404",
+        "municipio": "Alenquer",
+        "uf": "PA",
+        "lat": -1.0,
+        "lon": -55.0,
+        "valor": 39.7
       },
-      "maior_vento_medio_kmh": 29.2,
+      "maior_vento_medio_kmh": 28.1,
       "maior_vento_medio_local": {
         "cd_mun": "4209409",
         "municipio": "Laguna",
         "uf": "SC",
         "lat": -28.5,
         "lon": -48.75,
-        "valor": 8.1
+        "valor": 7.8
       },
-      "maior_vento_max_kmh": 37.8,
+      "maior_vento_max_kmh": 38.2,
       "maior_vento_max_local": {
         "cd_mun": "2911402",
         "municipio": "Glória",
         "uf": "BA",
         "lat": -9.0,
         "lon": -38.5,
-        "valor": 10.5
+        "valor": 10.6
       }
     },
     "2026-10-30": {
       "data": "2026-10-30",
       "data_br": "30/10/2026",
-      "maior_precipitacao_mm": 64.2,
-      "maior_tmax_c": 40.8,
-      "menor_tmin_c": 10.4,
-      "maior_tmed_c": 33.9,
-      "menor_ur_min_pct": 14.7,
-      "menor_ur_med_pct": 33.9,
-      "maior_vento_medio_ms": 8.9,
-      "maior_vento_max_ms": 10.6,
-      "municipios_ur_abaixo_30": 394,
+      "maior_precipitacao_mm": 91.3,
+      "maior_tmax_c": 41.1,
+      "menor_tmin_c": 10.7,
+      "maior_tmed_c": 33.8,
+      "menor_ur_min_pct": 17.0,
+      "menor_ur_med_pct": 35.9,
+      "maior_vento_medio_ms": 8.6,
+      "maior_vento_max_ms": 9.9,
+      "municipios_ur_abaixo_30": 303,
       "maior_precipitacao_local": {
-        "cd_mun": "3547502",
-        "municipio": "Santa Rita do Passa Quatro",
+        "cd_mun": "3546702",
+        "municipio": "Santa Gertrudes",
         "uf": "SP",
-        "lat": -21.75,
+        "lat": -22.5,
         "lon": -47.5,
-        "valor": 64.2
+        "valor": 91.3
       },
-      "media_precipitacao_mm": 5.7,
+      "media_precipitacao_mm": 6.4,
       "maior_tmax_local": {
         "cd_mun": "1505304",
         "municipio": "Oriximiná",
         "uf": "PA",
-        "lat": -0.5,
-        "lon": -56.5,
-        "valor": 40.8
+        "lat": -1.0,
+        "lon": -56.25,
+        "valor": 41.1
       },
       "menor_tmin_local": {
-        "cd_mun": "4218905",
-        "municipio": "Urubici",
-        "uf": "SC",
-        "lat": -28.0,
-        "lon": -49.5,
-        "valor": 10.4
+        "cd_mun": "4317103",
+        "municipio": "Sant'Ana do Livramento",
+        "uf": "RS",
+        "lat": -30.75,
+        "lon": -55.5,
+        "valor": 10.7
       },
       "maior_tmed_local": {
-        "cd_mun": "2210409",
-        "municipio": "São Miguel do Tapuio",
-        "uf": "PI",
-        "lat": -5.75,
-        "lon": -42.0,
-        "valor": 33.9
+        "cd_mun": "1400456",
+        "municipio": "Pacaraima",
+        "uf": "RR",
+        "lat": 4.0,
+        "lon": -60.75,
+        "valor": 33.8
       },
       "menor_ur_min_local": {
-        "cd_mun": "2605608",
-        "municipio": "Flores",
-        "uf": "PE",
-        "lat": -8.0,
+        "cd_mun": "2400901",
+        "municipio": "Antônio Martins",
+        "uf": "RN",
+        "lat": -6.25,
         "lon": -38.0,
-        "valor": 14.7
+        "valor": 17.0
       },
       "menor_ur_med_local": {
-        "cd_mun": "2200905",
-        "municipio": "Aroazes",
-        "uf": "PI",
-        "lat": -6.25,
-        "lon": -41.75,
-        "valor": 33.9
+        "cd_mun": "1505106",
+        "municipio": "Óbidos",
+        "uf": "PA",
+        "lat": 0.0,
+        "lon": -56.0,
+        "valor": 35.9
       },
-      "maior_vento_medio_kmh": 32.0,
+      "maior_vento_medio_kmh": 31.0,
       "maior_vento_medio_local": {
         "cd_mun": "3300258",
         "municipio": "Arraial do Cabo",
         "uf": "RJ",
         "lat": -23.0,
         "lon": -42.0,
-        "valor": 8.9
+        "valor": 8.6
       },
-      "maior_vento_max_kmh": 38.2,
+      "maior_vento_max_kmh": 35.6,
       "maior_vento_max_local": {
-        "cd_mun": "3300258",
-        "municipio": "Arraial do Cabo",
-        "uf": "RJ",
-        "lat": -23.0,
-        "lon": -42.0,
-        "valor": 10.6
+        "cd_mun": "1502004",
+        "municipio": "Cachoeira do Arari",
+        "uf": "PA",
+        "lat": -1.0,
+        "lon": -48.5,
+        "valor": 9.9
       }
     },
     "2026-10-31": {
       "data": "2026-10-31",
       "data_br": "31/10/2026",
-      "maior_precipitacao_mm": 66.4,
-      "maior_tmax_c": 40.5,
-      "menor_tmin_c": 10.9,
-      "maior_tmed_c": 34.2,
-      "menor_ur_min_pct": 13.1,
-      "menor_ur_med_pct": 34.7,
-      "maior_vento_medio_ms": 10.0,
-      "maior_vento_max_ms": 11.7,
-      "municipios_ur_abaixo_30": 418,
+      "maior_precipitacao_mm": 84.5,
+      "maior_tmax_c": 40.8,
+      "menor_tmin_c": 10.7,
+      "maior_tmed_c": 33.8,
+      "menor_ur_min_pct": 16.3,
+      "menor_ur_med_pct": 37.9,
+      "maior_vento_medio_ms": 9.4,
+      "maior_vento_max_ms": 10.9,
+      "municipios_ur_abaixo_30": 329,
       "maior_precipitacao_local": {
-        "cd_mun": "3109006",
-        "municipio": "Brumadinho",
+        "cd_mun": "3147808",
+        "municipio": "Passa Vinte",
         "uf": "MG",
-        "lat": -20.25,
+        "lat": -22.25,
         "lon": -44.25,
-        "valor": 66.4
+        "valor": 84.5
       },
-      "media_precipitacao_mm": 6.2,
+      "media_precipitacao_mm": 6.7,
       "maior_tmax_local": {
         "cd_mun": "1505304",
         "municipio": "Oriximiná",
         "uf": "PA",
         "lat": -1.25,
         "lon": -56.25,
-        "valor": 40.5
+        "valor": 40.8
       },
       "menor_tmin_local": {
         "cd_mun": "4202503",
@@ -439,7 +279,167 @@
         "uf": "SC",
         "lat": -28.25,
         "lon": -49.75,
+        "valor": 10.7
+      },
+      "maior_tmed_local": {
+        "cd_mun": "1400456",
+        "municipio": "Pacaraima",
+        "uf": "RR",
+        "lat": 4.0,
+        "lon": -60.75,
+        "valor": 33.8
+      },
+      "menor_ur_min_local": {
+        "cd_mun": "2606606",
+        "municipio": "Ibimirim",
+        "uf": "PE",
+        "lat": -8.5,
+        "lon": -37.5,
+        "valor": 16.3
+      },
+      "menor_ur_med_local": {
+        "cd_mun": "2205151",
+        "municipio": "Jacobina do Piauí",
+        "uf": "PI",
+        "lat": -8.0,
+        "lon": -41.25,
+        "valor": 37.9
+      },
+      "maior_vento_medio_kmh": 33.8,
+      "maior_vento_medio_local": {
+        "cd_mun": "3300258",
+        "municipio": "Arraial do Cabo",
+        "uf": "RJ",
+        "lat": -23.0,
+        "lon": -42.0,
+        "valor": 9.4
+      },
+      "maior_vento_max_kmh": 39.2,
+      "maior_vento_max_local": {
+        "cd_mun": "3300258",
+        "municipio": "Arraial do Cabo",
+        "uf": "RJ",
+        "lat": -23.0,
+        "lon": -42.0,
         "valor": 10.9
+      }
+    },
+    "2026-11-01": {
+      "data": "2026-11-01",
+      "data_br": "01/11/2026",
+      "maior_precipitacao_mm": 54.7,
+      "maior_tmax_c": 41.1,
+      "menor_tmin_c": 8.3,
+      "maior_tmed_c": 33.9,
+      "menor_ur_min_pct": 14.5,
+      "menor_ur_med_pct": 34.7,
+      "maior_vento_medio_ms": 7.6,
+      "maior_vento_max_ms": 9.7,
+      "municipios_ur_abaixo_30": 414,
+      "maior_precipitacao_local": {
+        "cd_mun": "3154101",
+        "municipio": "Recreio",
+        "uf": "MG",
+        "lat": -21.5,
+        "lon": -42.5,
+        "valor": 54.7
+      },
+      "media_precipitacao_mm": 4.1,
+      "maior_tmax_local": {
+        "cd_mun": "1505106",
+        "municipio": "Óbidos",
+        "uf": "PA",
+        "lat": -1.25,
+        "lon": -55.75,
+        "valor": 41.1
+      },
+      "menor_tmin_local": {
+        "cd_mun": "4200408",
+        "municipio": "Água Doce",
+        "uf": "SC",
+        "lat": -26.75,
+        "lon": -51.5,
+        "valor": 8.3
+      },
+      "maior_tmed_local": {
+        "cd_mun": "1400456",
+        "municipio": "Pacaraima",
+        "uf": "RR",
+        "lat": 4.0,
+        "lon": -60.75,
+        "valor": 33.9
+      },
+      "menor_ur_min_local": {
+        "cd_mun": "2607000",
+        "municipio": "Inajá",
+        "uf": "PE",
+        "lat": -8.75,
+        "lon": -37.75,
+        "valor": 14.5
+      },
+      "menor_ur_med_local": {
+        "cd_mun": "2203453",
+        "municipio": "Dom Inocêncio",
+        "uf": "PI",
+        "lat": -9.0,
+        "lon": -42.0,
+        "valor": 34.7
+      },
+      "maior_vento_medio_kmh": 27.4,
+      "maior_vento_medio_local": {
+        "cd_mun": "2101707",
+        "municipio": "Barreirinhas",
+        "uf": "MA",
+        "lat": -2.5,
+        "lon": -43.0,
+        "valor": 7.6
+      },
+      "maior_vento_max_kmh": 34.9,
+      "maior_vento_max_local": {
+        "cd_mun": "2403756",
+        "municipio": "Fernando Pedroza",
+        "uf": "RN",
+        "lat": -5.75,
+        "lon": -36.5,
+        "valor": 9.7
+      }
+    },
+    "2026-11-02": {
+      "data": "2026-11-02",
+      "data_br": "02/11/2026",
+      "maior_precipitacao_mm": 40.3,
+      "maior_tmax_c": 40.1,
+      "menor_tmin_c": 10.5,
+      "maior_tmed_c": 34.4,
+      "menor_ur_min_pct": 17.0,
+      "menor_ur_med_pct": 29.4,
+      "maior_vento_medio_ms": 8.2,
+      "maior_vento_max_ms": 9.9,
+      "municipios_ur_abaixo_30": 454,
+      "maior_precipitacao_local": {
+        "cd_mun": "3200904",
+        "municipio": "Barra de São Francisco",
+        "uf": "ES",
+        "lat": -18.5,
+        "lon": -40.75,
+        "valor": 40.3
+      },
+      "media_precipitacao_mm": 3.7,
+      "maior_tmax_local": {
+        "cd_mun": "1505304",
+        "municipio": "Oriximiná",
+        "uf": "PA",
+        "lat": -1.25,
+        "lon": -56.75,
+        "valor": 40.1
+      },
+      "menor_tmin_local": {
+        "cd_mun": "4318622",
+        "municipio": "São José dos Ausentes",
+        "uf": "RS",
+        "lat": -28.5,
+        "lon": -49.75,
+        "valor": 10.5
       },
       "maior_tmed_local": {
         "cd_mun": "2210409",
@@ -447,70 +447,70 @@
         "uf": "PI",
         "lat": -5.75,
         "lon": -42.0,
-        "valor": 34.2
+        "valor": 34.4
       },
       "menor_ur_min_local": {
-        "cd_mun": "2614600",
-        "municipio": "Tabira",
+        "cd_mun": "2612208",
+        "municipio": "Salgueiro",
         "uf": "PE",
-        "lat": -7.5,
-        "lon": -37.5,
-        "valor": 13.1
+        "lat": -8.25,
+        "lon": -39.0,
+        "valor": 17.0
       },
       "menor_ur_med_local": {
-        "cd_mun": "2302503",
-        "municipio": "Brejo Santo",
-        "uf": "CE",
-        "lat": -7.5,
-        "lon": -39.0,
-        "valor": 34.7
+        "cd_mun": "2203453",
+        "municipio": "Dom Inocêncio",
+        "uf": "PI",
+        "lat": -9.0,
+        "lon": -42.0,
+        "valor": 29.4
       },
-      "maior_vento_medio_kmh": 36.0,
+      "maior_vento_medio_kmh": 29.5,
       "maior_vento_medio_local": {
-        "cd_mun": "3300258",
-        "municipio": "Arraial do Cabo",
-        "uf": "RJ",
-        "lat": -23.0,
-        "lon": -42.0,
-        "valor": 10.0
+        "cd_mun": "2101707",
+        "municipio": "Barreirinhas",
+        "uf": "MA",
+        "lat": -2.5,
+        "lon": -43.0,
+        "valor": 8.2
       },
-      "maior_vento_max_kmh": 42.1,
+      "maior_vento_max_kmh": 35.6,
       "maior_vento_max_local": {
-        "cd_mun": "3300258",
-        "municipio": "Arraial do Cabo",
-        "uf": "RJ",
-        "lat": -23.0,
-        "lon": -42.0,
-        "valor": 11.7
+        "cd_mun": "1502004",
+        "municipio": "Cachoeira do Arari",
+        "uf": "PA",
+        "lat": -1.0,
+        "lon": -48.5,
+        "valor": 9.9
       }
     }
   },
   "acumulado": {
-    "periodo": "26/10/2026 a 31/10/2026",
-    "maior_precipitacao_mm": 200.9,
-    "maior_tmax_c": 41.2,
-    "menor_tmin_c": 4.1,
-    "maior_tmed_c": 34.6,
-    "menor_ur_min_pct": 13.1,
-    "menor_ur_med_pct": 28.5,
-    "maior_vento_medio_ms": 10.0,
-    "maior_vento_max_ms": 11.8,
+    "periodo": "28/10/2026 a 02/11/2026",
+    "maior_precipitacao_mm": 190.2,
+    "maior_tmax_c": 41.1,
+    "menor_tmin_c": 4.5,
+    "maior_tmed_c": 34.4,
+    "menor_ur_min_pct": 14.5,
+    "menor_ur_med_pct": 29.4,
+    "maior_vento_medio_ms": 9.4,
+    "maior_vento_max_ms": 10.9,
     "maior_precipitacao_local": {
-      "cd_mun": "3550704",
-      "municipio": "São Sebastião",
-      "uf": "SP",
-      "lat": -23.75,
-      "lon": -45.75,
-      "valor": 200.9
+      "cd_mun": "1302405",
+      "municipio": "Lábrea",
+      "uf": "AM",
+      "lat": -8.25,
+      "lon": -64.75,
+      "valor": 190.2
     },
-    "media_precipitacao_mm": 32.0,
+    "media_precipitacao_mm": 29.3,
     "maior_tmax_local": {
-      "cd_mun": "2700904",
-      "municipio": "Belo Monte",
-      "uf": "AL",
-      "lat": -9.75,
-      "lon": -37.25,
-      "valor": 41.2
+      "cd_mun": "1505106",
+      "municipio": "Óbidos",
+      "uf": "PA",
+      "lat": -1.25,
+      "lon": -55.75,
+      "valor": 41.1
     },
     "menor_tmin_local": {
       "cd_mun": "4202503",
@@ -518,49 +518,49 @@
       "uf": "SC",
       "lat": -28.25,
       "lon": -49.75,
-      "valor": 4.1
+      "valor": 4.5
     },
     "maior_tmed_local": {
-      "cd_mun": "2209609",
-      "municipio": "São Félix do Piauí",
+      "cd_mun": "2210409",
+      "municipio": "São Miguel do Tapuio",
       "uf": "PI",
-      "lat": -6.0,
+      "lat": -5.75,
       "lon": -42.0,
-      "valor": 34.6
+      "valor": 34.4
     },
     "menor_ur_min_local": {
-      "cd_mun": "2614600",
-      "municipio": "Tabira",
+      "cd_mun": "2607000",
+      "municipio": "Inajá",
       "uf": "PE",
-      "lat": -7.5,
-      "lon": -37.5,
-      "valor": 13.1
+      "lat": -8.75,
+      "lon": -37.75,
+      "valor": 14.5
     },
     "menor_ur_med_local": {
-      "cd_mun": "2207934",
-      "municipio": "Pedro Laurentino",
+      "cd_mun": "2203453",
+      "municipio": "Dom Inocêncio",
       "uf": "PI",
-      "lat": -8.25,
-      "lon": -42.25,
-      "valor": 28.5
+      "lat": -9.0,
+      "lon": -42.0,
+      "valor": 29.4
     },
-    "maior_vento_medio_kmh": 36.0,
+    "maior_vento_medio_kmh": 33.8,
     "maior_vento_medio_local": {
       "cd_mun": "3300258",
       "municipio": "Arraial do Cabo",
       "uf": "RJ",
       "lat": -23.0,
       "lon": -42.0,
-      "valor": 10.0
+      "valor": 9.4
     },
-    "maior_vento_max_kmh": 42.5,
+    "maior_vento_max_kmh": 39.2,
     "maior_vento_max_local": {
-      "cd_mun": "4300002",
-      "municipio": "Área Operacional \"Lagoa dos Patos\"",
-      "uf": "RS",
-      "lat": -31.5,
-      "lon": -51.75,
-      "valor": 11.8
+      "cd_mun": "3300258",
+      "municipio": "Arraial do Cabo",
+      "uf": "RJ",
+      "lat": -23.0,
+      "lon": -42.0,
+      "valor": 10.9
     }
   }
 }
