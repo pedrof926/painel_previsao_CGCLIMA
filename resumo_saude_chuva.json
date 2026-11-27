@@ -1,5 +1,5 @@
 {
-  "data_atualizacao": "23/11/2026 05:53",
+  "data_atualizacao": "27/11/2026 06:53",
   "fonte": "ECMWF HRES + unidades de saúde + SGB",
   "criterio_diario": {
     "atencao_mm": 30,
@@ -21,16 +21,16 @@
     "sgb": "/home/pedro/Downloads/setor_risco_sgb_leve.geojson"
   },
   "datas": {
-    "2026-11-24": {
-      "data": "2026-11-24",
-      "data_br": "24/11/2026",
+    "2026-11-28": {
+      "data": "2026-11-28",
+      "data_br": "28/11/2026",
       "por_tipo": {
         "upa": {
           "total": 749,
-          "chuva_atencao": 0,
+          "chuva_atencao": 7,
           "chuva_alerta": 0,
           "chuva_alto_impacto": 0,
-          "baixa_umidade_ur_lt_30": 36,
+          "baixa_umidade_ur_lt_30": 34,
           "vento_forte_ge_60_kmh": 0,
           "sgb_alto_muito_alto": 10,
           "chuva_alerta_e_sgb": 0,
@@ -38,72 +38,21 @@
         },
         "ubs": {
           "total": 49821,
-          "chuva_atencao": 72,
-          "chuva_alerta": 0,
-          "chuva_alto_impacto": 0,
-          "baixa_umidade_ur_lt_30": 6053,
-          "vento_forte_ge_60_kmh": 0,
-          "sgb_alto_muito_alto": 816,
-          "chuva_alerta_e_sgb": 0,
-          "chuva_alto_impacto_e_sgb": 0
-        },
-        "ubsi": {
-          "total": 1470,
-          "chuva_atencao": 0,
-          "chuva_alerta": 0,
-          "chuva_alto_impacto": 0,
-          "baixa_umidade_ur_lt_30": 227,
-          "vento_forte_ge_60_kmh": 0,
-          "sgb_alto_muito_alto": 8,
-          "chuva_alerta_e_sgb": 0,
-          "chuva_alto_impacto_e_sgb": 0
-        }
-      },
-      "totais": {
-        "total_unidades": 52040,
-        "chuva_atencao": 72,
-        "chuva_alerta": 0,
-        "chuva_alto_impacto": 0,
-        "baixa_umidade_ur_lt_30": 6316,
-        "vento_forte_ge_60_kmh": 0,
-        "sgb_alto_muito_alto": 834,
-        "chuva_alerta_e_sgb": 0,
-        "chuva_alto_impacto_e_sgb": 0
-      },
-      "texto_saude": "Na data selecionada (24/11/2026), foram identificadas 0 unidades de saúde com precipitação diária ≥ 50 mm. Dessas, 0 também estão inseridas em setores SGB Alto/Muito alto. Além disso, 6316 unidades apresentam umidade relativa mínima < 30% e 0 apresentam velocidade máxima do vento ≥ 60 km/h."
-    },
-    "2026-11-25": {
-      "data": "2026-11-25",
-      "data_br": "25/11/2026",
-      "por_tipo": {
-        "upa": {
-          "total": 749,
-          "chuva_atencao": 17,
-          "chuva_alerta": 4,
-          "chuva_alto_impacto": 2,
-          "baixa_umidade_ur_lt_30": 33,
-          "vento_forte_ge_60_kmh": 0,
-          "sgb_alto_muito_alto": 10,
-          "chuva_alerta_e_sgb": 0,
-          "chuva_alto_impacto_e_sgb": 0
-        },
-        "ubs": {
-          "total": 49821,
-          "chuva_atencao": 1596,
-          "chuva_alerta": 786,
-          "chuva_alto_impacto": 119,
-          "baixa_umidade_ur_lt_30": 5782,
-          "vento_forte_ge_60_kmh": 0,
-          "sgb_alto_muito_alto": 816,
-          "chuva_alerta_e_sgb": 9,
-          "chuva_alto_impacto_e_sgb": 2
-        },
-        "ubsi": {
-          "total": 1470,
-          "chuva_atencao": 63,
-          "chuva_alerta": 54,
+          "chuva_atencao": 421,
+          "chuva_alerta": 35,
           "chuva_alto_impacto": 4,
-          "baixa_umidade_ur_lt_30": 206,
+          "baixa_umidade_ur_lt_30": 5355,
+          "vento_forte_ge_60_kmh": 0,
+          "sgb_alto_muito_alto": 816,
+          "chuva_alerta_e_sgb": 2,
+          "chuva_alto_impacto_e_sgb": 1
+        },
+        "ubsi": {
+          "total": 1470,
+          "chuva_atencao": 18,
+          "chuva_alerta": 5,
+          "chuva_alto_impacto": 1,
+          "baixa_umidade_ur_lt_30": 120,
           "vento_forte_ge_60_kmh": 0,
           "sgb_alto_muito_alto": 8,
           "chuva_alerta_e_sgb": 0,
@@ -112,27 +61,27 @@
       },
       "totais": {
         "total_unidades": 52040,
-        "chuva_atencao": 1676,
-        "chuva_alerta": 844,
-        "chuva_alto_impacto": 125,
-        "baixa_umidade_ur_lt_30": 6021,
+        "chuva_atencao": 446,
+        "chuva_alerta": 40,
+        "chuva_alto_impacto": 5,
+        "baixa_umidade_ur_lt_30": 5509,
         "vento_forte_ge_60_kmh": 0,
         "sgb_alto_muito_alto": 834,
-        "chuva_alerta_e_sgb": 9,
-        "chuva_alto_impacto_e_sgb": 2
+        "chuva_alerta_e_sgb": 2,
+        "chuva_alto_impacto_e_sgb": 1
       },
-      "texto_saude": "Na data selecionada (25/11/2026), foram identificadas 844 unidades de saúde com precipitação diária ≥ 50 mm. Dessas, 9 também estão inseridas em setores SGB Alto/Muito alto. Além disso, 6021 unidades apresentam umidade relativa mínima < 30% e 0 apresentam velocidade máxima do vento ≥ 60 km/h."
+      "texto_saude": "Na data selecionada (28/11/2026), foram identificadas 40 unidades de saúde com precipitação diária ≥ 50 mm. Dessas, 2 também estão inseridas em setores SGB Alto/Muito alto. Além disso, 5509 unidades apresentam umidade relativa mínima < 30% e 0 apresentam velocidade máxima do vento ≥ 60 km/h."
     },
-    "2026-11-26": {
-      "data": "2026-11-26",
-      "data_br": "26/11/2026",
+    "2026-11-29": {
+      "data": "2026-11-29",
+      "data_br": "29/11/2026",
       "por_tipo": {
         "upa": {
           "total": 749,
           "chuva_atencao": 39,
-          "chuva_alerta": 4,
+          "chuva_alerta": 2,
           "chuva_alto_impacto": 0,
-          "baixa_umidade_ur_lt_30": 40,
+          "baixa_umidade_ur_lt_30": 27,
           "vento_forte_ge_60_kmh": 0,
           "sgb_alto_muito_alto": 10,
           "chuva_alerta_e_sgb": 0,
@@ -140,21 +89,21 @@
         },
         "ubs": {
           "total": 49821,
-          "chuva_atencao": 2055,
-          "chuva_alerta": 89,
+          "chuva_atencao": 2291,
+          "chuva_alerta": 410,
           "chuva_alto_impacto": 0,
-          "baixa_umidade_ur_lt_30": 6458,
+          "baixa_umidade_ur_lt_30": 4609,
           "vento_forte_ge_60_kmh": 0,
           "sgb_alto_muito_alto": 816,
-          "chuva_alerta_e_sgb": 0,
+          "chuva_alerta_e_sgb": 11,
           "chuva_alto_impacto_e_sgb": 0
         },
         "ubsi": {
           "total": 1470,
-          "chuva_atencao": 32,
-          "chuva_alerta": 1,
+          "chuva_atencao": 53,
+          "chuva_alerta": 15,
           "chuva_alto_impacto": 0,
-          "baixa_umidade_ur_lt_30": 141,
+          "baixa_umidade_ur_lt_30": 125,
           "vento_forte_ge_60_kmh": 0,
           "sgb_alto_muito_alto": 8,
           "chuva_alerta_e_sgb": 0,
@@ -163,27 +112,27 @@
       },
       "totais": {
         "total_unidades": 52040,
-        "chuva_atencao": 2126,
-        "chuva_alerta": 94,
+        "chuva_atencao": 2383,
+        "chuva_alerta": 427,
         "chuva_alto_impacto": 0,
-        "baixa_umidade_ur_lt_30": 6639,
+        "baixa_umidade_ur_lt_30": 4761,
         "vento_forte_ge_60_kmh": 0,
         "sgb_alto_muito_alto": 834,
-        "chuva_alerta_e_sgb": 0,
+        "chuva_alerta_e_sgb": 11,
         "chuva_alto_impacto_e_sgb": 0
       },
-      "texto_saude": "Na data selecionada (26/11/2026), foram identificadas 94 unidades de saúde com precipitação diária ≥ 50 mm. Dessas, 0 também estão inseridas em setores SGB Alto/Muito alto. Além disso, 6639 unidades apresentam umidade relativa mínima < 30% e 0 apresentam velocidade máxima do vento ≥ 60 km/h."
+      "texto_saude": "Na data selecionada (29/11/2026), foram identificadas 427 unidades de saúde com precipitação diária ≥ 50 mm. Dessas, 11 também estão inseridas em setores SGB Alto/Muito alto. Além disso, 4761 unidades apresentam umidade relativa mínima < 30% e 0 apresentam velocidade máxima do vento ≥ 60 km/h."
     },
-    "2026-11-27": {
-      "data": "2026-11-27",
-      "data_br": "27/11/2026",
+    "2026-11-30": {
+      "data": "2026-11-30",
+      "data_br": "30/11/2026",
       "por_tipo": {
         "upa": {
           "total": 749,
-          "chuva_atencao": 93,
-          "chuva_alerta": 20,
-          "chuva_alto_impacto": 4,
-          "baixa_umidade_ur_lt_30": 43,
+          "chuva_atencao": 24,
+          "chuva_alerta": 1,
+          "chuva_alto_impacto": 0,
+          "baixa_umidade_ur_lt_30": 37,
           "vento_forte_ge_60_kmh": 0,
           "sgb_alto_muito_alto": 10,
           "chuva_alerta_e_sgb": 0,
@@ -191,20 +140,71 @@
         },
         "ubs": {
           "total": 49821,
-          "chuva_atencao": 3234,
-          "chuva_alerta": 791,
-          "chuva_alto_impacto": 112,
-          "baixa_umidade_ur_lt_30": 7240,
+          "chuva_atencao": 565,
+          "chuva_alerta": 65,
+          "chuva_alto_impacto": 0,
+          "baixa_umidade_ur_lt_30": 6073,
           "vento_forte_ge_60_kmh": 0,
           "sgb_alto_muito_alto": 816,
-          "chuva_alerta_e_sgb": 13,
-          "chuva_alto_impacto_e_sgb": 12
+          "chuva_alerta_e_sgb": 0,
+          "chuva_alto_impacto_e_sgb": 0
         },
         "ubsi": {
           "total": 1470,
-          "chuva_atencao": 23,
-          "chuva_alerta": 9,
-          "chuva_alto_impacto": 3,
+          "chuva_atencao": 10,
+          "chuva_alerta": 2,
+          "chuva_alto_impacto": 0,
+          "baixa_umidade_ur_lt_30": 156,
+          "vento_forte_ge_60_kmh": 0,
+          "sgb_alto_muito_alto": 8,
+          "chuva_alerta_e_sgb": 0,
+          "chuva_alto_impacto_e_sgb": 0
+        }
+      },
+      "totais": {
+        "total_unidades": 52040,
+        "chuva_atencao": 599,
+        "chuva_alerta": 68,
+        "chuva_alto_impacto": 0,
+        "baixa_umidade_ur_lt_30": 6266,
+        "vento_forte_ge_60_kmh": 0,
+        "sgb_alto_muito_alto": 834,
+        "chuva_alerta_e_sgb": 0,
+        "chuva_alto_impacto_e_sgb": 0
+      },
+      "texto_saude": "Na data selecionada (30/11/2026), foram identificadas 68 unidades de saúde com precipitação diária ≥ 50 mm. Dessas, 0 também estão inseridas em setores SGB Alto/Muito alto. Além disso, 6266 unidades apresentam umidade relativa mínima < 30% e 0 apresentam velocidade máxima do vento ≥ 60 km/h."
+    },
+    "2026-12-01": {
+      "data": "2026-12-01",
+      "data_br": "01/12/2026",
+      "por_tipo": {
+        "upa": {
+          "total": 749,
+          "chuva_atencao": 5,
+          "chuva_alerta": 0,
+          "chuva_alto_impacto": 0,
+          "baixa_umidade_ur_lt_30": 47,
+          "vento_forte_ge_60_kmh": 0,
+          "sgb_alto_muito_alto": 10,
+          "chuva_alerta_e_sgb": 0,
+          "chuva_alto_impacto_e_sgb": 0
+        },
+        "ubs": {
+          "total": 49821,
+          "chuva_atencao": 483,
+          "chuva_alerta": 0,
+          "chuva_alto_impacto": 0,
+          "baixa_umidade_ur_lt_30": 7733,
+          "vento_forte_ge_60_kmh": 0,
+          "sgb_alto_muito_alto": 816,
+          "chuva_alerta_e_sgb": 0,
+          "chuva_alto_impacto_e_sgb": 0
+        },
+        "ubsi": {
+          "total": 1470,
+          "chuva_atencao": 51,
+          "chuva_alerta": 0,
+          "chuva_alto_impacto": 0,
           "baixa_umidade_ur_lt_30": 171,
           "vento_forte_ge_60_kmh": 0,
           "sgb_alto_muito_alto": 8,
@@ -214,151 +214,151 @@
       },
       "totais": {
         "total_unidades": 52040,
-        "chuva_atencao": 3350,
-        "chuva_alerta": 820,
-        "chuva_alto_impacto": 119,
-        "baixa_umidade_ur_lt_30": 7454,
-        "vento_forte_ge_60_kmh": 0,
-        "sgb_alto_muito_alto": 834,
-        "chuva_alerta_e_sgb": 13,
-        "chuva_alto_impacto_e_sgb": 12
-      },
-      "texto_saude": "Na data selecionada (27/11/2026), foram identificadas 820 unidades de saúde com precipitação diária ≥ 50 mm. Dessas, 13 também estão inseridas em setores SGB Alto/Muito alto. Além disso, 7454 unidades apresentam umidade relativa mínima < 30% e 0 apresentam velocidade máxima do vento ≥ 60 km/h."
-    },
-    "2026-11-28": {
-      "data": "2026-11-28",
-      "data_br": "28/11/2026",
-      "por_tipo": {
-        "upa": {
-          "total": 749,
-          "chuva_atencao": 20,
-          "chuva_alerta": 7,
-          "chuva_alto_impacto": 4,
-          "baixa_umidade_ur_lt_30": 37,
-          "vento_forte_ge_60_kmh": 0,
-          "sgb_alto_muito_alto": 10,
-          "chuva_alerta_e_sgb": 2,
-          "chuva_alto_impacto_e_sgb": 2
-        },
-        "ubs": {
-          "total": 49821,
-          "chuva_atencao": 1723,
-          "chuva_alerta": 678,
-          "chuva_alto_impacto": 209,
-          "baixa_umidade_ur_lt_30": 6027,
-          "vento_forte_ge_60_kmh": 0,
-          "sgb_alto_muito_alto": 816,
-          "chuva_alerta_e_sgb": 35,
-          "chuva_alto_impacto_e_sgb": 25
-        },
-        "ubsi": {
-          "total": 1470,
-          "chuva_atencao": 12,
-          "chuva_alerta": 0,
-          "chuva_alto_impacto": 0,
-          "baixa_umidade_ur_lt_30": 154,
-          "vento_forte_ge_60_kmh": 0,
-          "sgb_alto_muito_alto": 8,
-          "chuva_alerta_e_sgb": 0,
-          "chuva_alto_impacto_e_sgb": 0
-        }
-      },
-      "totais": {
-        "total_unidades": 52040,
-        "chuva_atencao": 1755,
-        "chuva_alerta": 685,
-        "chuva_alto_impacto": 213,
-        "baixa_umidade_ur_lt_30": 6218,
-        "vento_forte_ge_60_kmh": 0,
-        "sgb_alto_muito_alto": 834,
-        "chuva_alerta_e_sgb": 37,
-        "chuva_alto_impacto_e_sgb": 27
-      },
-      "texto_saude": "Na data selecionada (28/11/2026), foram identificadas 685 unidades de saúde com precipitação diária ≥ 50 mm. Dessas, 37 também estão inseridas em setores SGB Alto/Muito alto. Além disso, 6218 unidades apresentam umidade relativa mínima < 30% e 0 apresentam velocidade máxima do vento ≥ 60 km/h."
-    },
-    "2026-11-29": {
-      "data": "2026-11-29",
-      "data_br": "29/11/2026",
-      "por_tipo": {
-        "upa": {
-          "total": 749,
-          "chuva_atencao": 16,
-          "chuva_alerta": 3,
-          "chuva_alto_impacto": 0,
-          "baixa_umidade_ur_lt_30": 32,
-          "vento_forte_ge_60_kmh": 0,
-          "sgb_alto_muito_alto": 10,
-          "chuva_alerta_e_sgb": 0,
-          "chuva_alto_impacto_e_sgb": 0
-        },
-        "ubs": {
-          "total": 49821,
-          "chuva_atencao": 1199,
-          "chuva_alerta": 98,
-          "chuva_alto_impacto": 0,
-          "baixa_umidade_ur_lt_30": 4480,
-          "vento_forte_ge_60_kmh": 0,
-          "sgb_alto_muito_alto": 816,
-          "chuva_alerta_e_sgb": 1,
-          "chuva_alto_impacto_e_sgb": 0
-        },
-        "ubsi": {
-          "total": 1470,
-          "chuva_atencao": 25,
-          "chuva_alerta": 5,
-          "chuva_alto_impacto": 0,
-          "baixa_umidade_ur_lt_30": 99,
-          "vento_forte_ge_60_kmh": 0,
-          "sgb_alto_muito_alto": 8,
-          "chuva_alerta_e_sgb": 0,
-          "chuva_alto_impacto_e_sgb": 0
-        }
-      },
-      "totais": {
-        "total_unidades": 52040,
-        "chuva_atencao": 1240,
-        "chuva_alerta": 106,
+        "chuva_atencao": 539,
+        "chuva_alerta": 0,
         "chuva_alto_impacto": 0,
-        "baixa_umidade_ur_lt_30": 4611,
+        "baixa_umidade_ur_lt_30": 7951,
         "vento_forte_ge_60_kmh": 0,
         "sgb_alto_muito_alto": 834,
-        "chuva_alerta_e_sgb": 1,
+        "chuva_alerta_e_sgb": 0,
         "chuva_alto_impacto_e_sgb": 0
       },
-      "texto_saude": "Na data selecionada (29/11/2026), foram identificadas 106 unidades de saúde com precipitação diária ≥ 50 mm. Dessas, 1 também estão inseridas em setores SGB Alto/Muito alto. Além disso, 4611 unidades apresentam umidade relativa mínima < 30% e 0 apresentam velocidade máxima do vento ≥ 60 km/h."
+      "texto_saude": "Na data selecionada (01/12/2026), foram identificadas 0 unidades de saúde com precipitação diária ≥ 50 mm. Dessas, 0 também estão inseridas em setores SGB Alto/Muito alto. Além disso, 7951 unidades apresentam umidade relativa mínima < 30% e 0 apresentam velocidade máxima do vento ≥ 60 km/h."
+    },
+    "2026-12-02": {
+      "data": "2026-12-02",
+      "data_br": "02/12/2026",
+      "por_tipo": {
+        "upa": {
+          "total": 749,
+          "chuva_atencao": 4,
+          "chuva_alerta": 1,
+          "chuva_alto_impacto": 0,
+          "baixa_umidade_ur_lt_30": 47,
+          "vento_forte_ge_60_kmh": 0,
+          "sgb_alto_muito_alto": 10,
+          "chuva_alerta_e_sgb": 0,
+          "chuva_alto_impacto_e_sgb": 0
+        },
+        "ubs": {
+          "total": 49821,
+          "chuva_atencao": 276,
+          "chuva_alerta": 33,
+          "chuva_alto_impacto": 0,
+          "baixa_umidade_ur_lt_30": 6973,
+          "vento_forte_ge_60_kmh": 0,
+          "sgb_alto_muito_alto": 816,
+          "chuva_alerta_e_sgb": 0,
+          "chuva_alto_impacto_e_sgb": 0
+        },
+        "ubsi": {
+          "total": 1470,
+          "chuva_atencao": 11,
+          "chuva_alerta": 0,
+          "chuva_alto_impacto": 0,
+          "baixa_umidade_ur_lt_30": 143,
+          "vento_forte_ge_60_kmh": 0,
+          "sgb_alto_muito_alto": 8,
+          "chuva_alerta_e_sgb": 0,
+          "chuva_alto_impacto_e_sgb": 0
+        }
+      },
+      "totais": {
+        "total_unidades": 52040,
+        "chuva_atencao": 291,
+        "chuva_alerta": 34,
+        "chuva_alto_impacto": 0,
+        "baixa_umidade_ur_lt_30": 7163,
+        "vento_forte_ge_60_kmh": 0,
+        "sgb_alto_muito_alto": 834,
+        "chuva_alerta_e_sgb": 0,
+        "chuva_alto_impacto_e_sgb": 0
+      },
+      "texto_saude": "Na data selecionada (02/12/2026), foram identificadas 34 unidades de saúde com precipitação diária ≥ 50 mm. Dessas, 0 também estão inseridas em setores SGB Alto/Muito alto. Além disso, 7163 unidades apresentam umidade relativa mínima < 30% e 0 apresentam velocidade máxima do vento ≥ 60 km/h."
+    },
+    "2026-12-03": {
+      "data": "2026-12-03",
+      "data_br": "03/12/2026",
+      "por_tipo": {
+        "upa": {
+          "total": 749,
+          "chuva_atencao": 4,
+          "chuva_alerta": 0,
+          "chuva_alto_impacto": 0,
+          "baixa_umidade_ur_lt_30": 42,
+          "vento_forte_ge_60_kmh": 0,
+          "sgb_alto_muito_alto": 10,
+          "chuva_alerta_e_sgb": 0,
+          "chuva_alto_impacto_e_sgb": 0
+        },
+        "ubs": {
+          "total": 49821,
+          "chuva_atencao": 358,
+          "chuva_alerta": 1,
+          "chuva_alto_impacto": 0,
+          "baixa_umidade_ur_lt_30": 6433,
+          "vento_forte_ge_60_kmh": 0,
+          "sgb_alto_muito_alto": 816,
+          "chuva_alerta_e_sgb": 0,
+          "chuva_alto_impacto_e_sgb": 0
+        },
+        "ubsi": {
+          "total": 1470,
+          "chuva_atencao": 35,
+          "chuva_alerta": 0,
+          "chuva_alto_impacto": 0,
+          "baixa_umidade_ur_lt_30": 134,
+          "vento_forte_ge_60_kmh": 0,
+          "sgb_alto_muito_alto": 8,
+          "chuva_alerta_e_sgb": 0,
+          "chuva_alto_impacto_e_sgb": 0
+        }
+      },
+      "totais": {
+        "total_unidades": 52040,
+        "chuva_atencao": 397,
+        "chuva_alerta": 1,
+        "chuva_alto_impacto": 0,
+        "baixa_umidade_ur_lt_30": 6609,
+        "vento_forte_ge_60_kmh": 0,
+        "sgb_alto_muito_alto": 834,
+        "chuva_alerta_e_sgb": 0,
+        "chuva_alto_impacto_e_sgb": 0
+      },
+      "texto_saude": "Na data selecionada (03/12/2026), foram identificadas 1 unidades de saúde com precipitação diária ≥ 50 mm. Dessas, 0 também estão inseridas em setores SGB Alto/Muito alto. Além disso, 6609 unidades apresentam umidade relativa mínima < 30% e 0 apresentam velocidade máxima do vento ≥ 60 km/h."
     }
   },
   "acumulado": {
-    "periodo": "24/11/2026 a 29/11/2026",
+    "periodo": "28/11/2026 a 03/12/2026",
     "por_tipo": {
       "upa": {
         "total": 749,
-        "chuva_atencao": 63,
-        "chuva_alerta": 13,
+        "chuva_atencao": 20,
+        "chuva_alerta": 1,
         "chuva_alto_impacto": 0,
-        "baixa_umidade_ur_lt_30": 48,
+        "baixa_umidade_ur_lt_30": 57,
         "vento_forte_ge_60_kmh": 0,
         "sgb_alto_muito_alto": 10,
-        "chuva_alerta_e_sgb": 2,
+        "chuva_alerta_e_sgb": 0,
         "chuva_alto_impacto_e_sgb": 0
       },
       "ubs": {
         "total": 49821,
-        "chuva_atencao": 3985,
-        "chuva_alerta": 773,
-        "chuva_alto_impacto": 30,
-        "baixa_umidade_ur_lt_30": 8287,
+        "chuva_atencao": 1660,
+        "chuva_alerta": 42,
+        "chuva_alto_impacto": 0,
+        "baixa_umidade_ur_lt_30": 9261,
         "vento_forte_ge_60_kmh": 0,
         "sgb_alto_muito_alto": 816,
-        "chuva_alerta_e_sgb": 33,
-        "chuva_alto_impacto_e_sgb": 4
+        "chuva_alerta_e_sgb": 1,
+        "chuva_alto_impacto_e_sgb": 0
       },
       "ubsi": {
         "total": 1470,
-        "chuva_atencao": 102,
-        "chuva_alerta": 18,
+        "chuva_atencao": 66,
+        "chuva_alerta": 5,
         "chuva_alto_impacto": 0,
-        "baixa_umidade_ur_lt_30": 249,
+        "baixa_umidade_ur_lt_30": 183,
         "vento_forte_ge_60_kmh": 0,
         "sgb_alto_muito_alto": 8,
         "chuva_alerta_e_sgb": 0,
@@ -367,15 +367,15 @@
     },
     "totais": {
       "total_unidades": 52040,
-      "chuva_atencao": 4150,
-      "chuva_alerta": 804,
-      "chuva_alto_impacto": 30,
-      "baixa_umidade_ur_lt_30": 8584,
+      "chuva_atencao": 1746,
+      "chuva_alerta": 48,
+      "chuva_alto_impacto": 0,
+      "baixa_umidade_ur_lt_30": 9501,
       "vento_forte_ge_60_kmh": 0,
       "sgb_alto_muito_alto": 834,
-      "chuva_alerta_e_sgb": 35,
-      "chuva_alto_impacto_e_sgb": 4
+      "chuva_alerta_e_sgb": 1,
+      "chuva_alto_impacto_e_sgb": 0
     },
-    "texto_saude": "No período acumulado (24/11/2026 a 29/11/2026), foram identificadas 804 unidades de saúde com precipitação acumulada ≥ 150 mm. Dessas, 35 também estão inseridas em setores SGB Alto/Muito alto. No período, 8584 unidades tiveram umidade relativa mínima < 30% e 0 tiveram velocidade máxima do vento ≥ 60 km/h."
+    "texto_saude": "No período acumulado (28/11/2026 a 03/12/2026), foram identificadas 48 unidades de saúde com precipitação acumulada ≥ 150 mm. Dessas, 1 também estão inseridas em setores SGB Alto/Muito alto. No período, 9501 unidades tiveram umidade relativa mínima < 30% e 0 tiveram velocidade máxima do vento ≥ 60 km/h."
   }
 }
